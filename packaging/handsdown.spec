@@ -9,6 +9,8 @@ a = Analysis(
     datas=[
         (root + "/models/hand_landmarker.task", "models"),
         (root + "/models/face_landmarker.task", "models"),
+        (root + "/models/LICENSE-APACHE-2.0.txt", "models"),
+        (root + "/LICENSE", "."),
         (root + "/assets/sounds", "assets/sounds"),
         *collect_data_files("mediapipe"),
     ],

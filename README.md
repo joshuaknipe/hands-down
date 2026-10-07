@@ -127,3 +127,8 @@ then start it again.
   git tag v0.1.0
   git push origin v0.1.0
   ```
+
+## Licence
+
+Hands Down is under the [MIT licence](LICENSE). The bundled MediaPipe hand and face models are
+© Google LLC under the Apache License 2.0; see [models/SOURCES.md](models/SOURCES.md).
