@@ -29,6 +29,10 @@ def main(argv: list[str] | None = None) -> int:
     co.add_argument("--backends", default=None, help="comma-separated backends (default: all for this OS)")
     co.add_argument("--observe", type=float, default=15.0, help="seconds both apps run together per trial")
 
+    ev = sub.add_parser("evaluate", help="Run the stage 1 detector over recorded clips")
+    ev.add_argument("--margin", type=float, default=None, help="head zone margin in face widths")
+    ev.add_argument("--dwell", type=float, default=None, help="seconds of contact before an alert")
+
     args = parser.parse_args(argv)
 
     if args.command == "probe":
@@ -60,6 +64,19 @@ def main(argv: list[str] | None = None) -> int:
         report = run_session(backends, make_opener(args.camera), ask=input, say=print, observe_seconds=args.observe)
         print(f"Report written to {write_report(reports_dir(), 'coexist', report, datetime.now())}")
         return 0
+    if args.command == "evaluate":
+        from dataclasses import replace
+
+        from feasibility.evaluate import run_evaluate
+        from handsdown.paths import clips_dir
+        from handsdown.settings import Settings, clamp
+
+        settings = Settings()
+        if args.margin is not None:
+            settings = replace(settings, zone_margin=args.margin)
+        if args.dwell is not None:
+            settings = replace(settings, dwell_s=args.dwell)
+        return run_evaluate(clips_dir(), clamp(settings))
     return 2
 
 

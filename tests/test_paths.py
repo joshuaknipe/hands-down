@@ -35,3 +35,9 @@ def test_missing_model_raises_with_path():
 def test_data_folders_are_under_project_root():
     assert paths.clips_dir() == paths.PROJECT_ROOT / "clips"
     assert paths.reports_dir() == paths.PROJECT_ROOT / "reports"
+
+
+def test_user_folders_are_named_for_the_app():
+    assert paths.settings_path().name == "settings.json"
+    assert "Hands Down" in str(paths.settings_path())
+    assert "Hands Down" in str(paths.log_dir())

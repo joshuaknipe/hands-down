@@ -11,6 +11,13 @@ from mediapipe.tasks.python.core.base_options import BaseOptions
 from handsdown.paths import model_path
 
 Point = tuple[float, float]
+Box = tuple[float, float, float, float]  # x0, y0, x1, y1, normalised to the frame
+
+
+def bounding_box(points) -> Box:
+    xs = [x for x, _ in points]
+    ys = [y for _, y in points]
+    return (min(xs), min(ys), max(xs), max(ys))
 
 
 @dataclass(frozen=True)
@@ -18,6 +25,7 @@ class Observation:
     timestamp_ms: int
     hands: tuple[tuple[Point, ...], ...]  # per hand, normalised (x, y) landmarks
     face_found: bool
+    face_box: Box | None = None  # bounding box of the face landmarks, when a face is found
 
     @property
     def hand_found(self) -> bool:
@@ -61,10 +69,12 @@ class Tracker:
         image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
         hands = self._hands.detect_for_video(image, timestamp_ms)
         face = self._face.detect_for_video(image, timestamp_ms)
+        face_box = bounding_box([(lm.x, lm.y) for lm in face.face_landmarks[0]]) if face.face_landmarks else None
         return Observation(
             timestamp_ms,
             tuple(tuple((lm.x, lm.y) for lm in hand) for hand in hands.hand_landmarks),
-            bool(face.face_landmarks),
+            face_box is not None,
+            face_box,
         )
 
     def close(self) -> None:

@@ -3,6 +3,8 @@
 import sys
 from pathlib import Path
 
+from platformdirs import user_config_path, user_log_path
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
@@ -30,3 +32,14 @@ def clips_dir() -> Path:
 
 def reports_dir() -> Path:
     return PROJECT_ROOT / "reports"
+
+
+APP_NAME = "Hands Down"
+
+
+def settings_path() -> Path:
+    return user_config_path(APP_NAME, appauthor=False) / "settings.json"
+
+
+def log_dir() -> Path:
+    return user_log_path(APP_NAME, appauthor=False)
