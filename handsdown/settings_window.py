@@ -161,11 +161,11 @@ def run_settings_window(path: Path | None = None) -> int:
     slider("Ignored chin area", zone["chin_cutout"], *LIMITS["chin_cutout"], "{:.1f}x")
     hint("Set to 0 to count the chin and mouth too")
     add("Pause while the screen is locked", ttk.Checkbutton(frame, variable=pause_when_locked))
-    if sys.platform == "win32":
-        add("Start with Windows", ttk.Checkbutton(frame, variable=start))
+    if startup.startup_label():
+        add(startup.startup_label(), ttk.Checkbutton(frame, variable=start))
     add("Camera number", ttk.Spinbox(frame, from_=0, to=9, textvariable=camera, width=5))
 
-    saver = AutoSaver(path, base, set_startup=startup.set_start_with_windows if sys.platform == "win32" else None)
+    saver = AutoSaver(path, base, set_startup=startup.set_start_at_login if startup.startup_label() else None)
     pending = [None]
 
     def save_now() -> None:

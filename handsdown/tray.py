@@ -56,3 +56,19 @@ def menu_items(state: str | None, paused: bool, camera_open: bool = False) -> li
         MenuItem("Quit", "quit"),
     ]
     return items
+
+
+# macOS only shows menu bar icons that fit to the right of a MacBook's notch, and puts a new app's
+# icon furthest left, so on a crowded bar it is hidden. Ask for a spot near the clock instead.
+MENU_BAR_POSITION_KEY = "NSStatusItem Preferred Position Item-0"
+MENU_BAR_POSITION = 300.0
+
+
+def place_menu_bar_icon(defaults=None) -> None:
+    """Set the icon's position on first run only, so a position the user drags it to is kept."""
+    if defaults is None:
+        from Foundation import NSUserDefaults
+
+        defaults = NSUserDefaults.standardUserDefaults()
+    if defaults.objectForKey_(MENU_BAR_POSITION_KEY) is None:
+        defaults.setFloat_forKey_(MENU_BAR_POSITION, MENU_BAR_POSITION_KEY)

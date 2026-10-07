@@ -15,7 +15,7 @@ from handsdown.paths import log_dir, settings_path
 from handsdown.preview import CameraView, annotate, encode
 from handsdown.settings import SettingsStore
 from handsdown.single import acquire
-from handsdown.tray import STATE_LABELS, draw_icon, menu_items
+from handsdown.tray import STATE_LABELS, draw_icon, menu_items, place_menu_bar_icon
 
 PAUSES = {"pause_call": (None, "call"), "pause_15": (15 * 60, "15 min"), "pause_60": (60 * 60, "1 hour")}
 
@@ -68,6 +68,11 @@ def run_app() -> int:
         tell_already_running()
         return 0
     store = SettingsStore(settings_path(), warn=lambda message: log.write("error", message=message))
+    if sys.platform == "darwin":
+        try:
+            place_menu_bar_icon()
+        except Exception as exc:  # cosmetic: never stop the app over it
+            log.write("error", message=f"Could not place the menu bar icon: {exc}")
     icon = pystray.Icon("handsdown", draw_icon(None), "Hands Down")
 
     def notify(title: str, text: str) -> None:

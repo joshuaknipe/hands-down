@@ -57,3 +57,30 @@ def test_menu_offers_hide_camera_while_the_view_is_open():
 
 def test_summary_command_runs_this_module_from_source():
     assert app.summary_command() == [sys.executable, "-m", "handsdown", "--summary"]
+
+
+class FakeDefaults:
+    def __init__(self, values=None):
+        self.values = dict(values or {})
+
+    def objectForKey_(self, key):
+        return self.values.get(key)
+
+    def setFloat_forKey_(self, value, key):
+        self.values[key] = value
+
+
+def test_menu_bar_position_is_set_near_the_clock_on_first_run():
+    from handsdown.tray import MENU_BAR_POSITION_KEY, place_menu_bar_icon
+
+    defaults = FakeDefaults()
+    place_menu_bar_icon(defaults)
+    assert defaults.values[MENU_BAR_POSITION_KEY] > 0
+
+
+def test_menu_bar_position_chosen_by_the_user_is_kept():
+    from handsdown.tray import MENU_BAR_POSITION_KEY, place_menu_bar_icon
+
+    defaults = FakeDefaults({MENU_BAR_POSITION_KEY: 812.0})
+    place_menu_bar_icon(defaults)
+    assert defaults.values[MENU_BAR_POSITION_KEY] == 812.0

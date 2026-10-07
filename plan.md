@@ -9,7 +9,7 @@ Hands Down is a small desktop app that watches the webcam and gently alerts the 
 - **Primary user:** one person, on a Windows 11 laptop, working in other apps for hours at a time, including video calls in the Teams desktop app. She has agreed to record test clips on her laptop.
 - **Goal:** raise awareness at the moment the hand reaches her hair, as an awareness prompt. It is a nudge, not a blocker or a scorecard.
 - **Success:** alerts fire on real episodes with few enough false alarms, and little enough friction around calls, that she keeps it running all day. "Few enough" is defined by the acceptance criteria below.
-- **Out of scope for v1:** mobile, multi-user accounts, cloud sync, analytics dashboards, screen-edge flash alerts, a packaged Mac build.
+- **Out of scope for v1:** mobile, multi-user accounts, cloud sync, analytics dashboards, screen-edge flash alerts. (A packaged Mac build was first out of scope, then added after milestone 2.)
 
 **Central uncertainty.** Hands Down assumes that a visible hand near her hair is a good enough stand-in for her actual habit. Nothing else in this plan matters if that is false, so the first milestone exists to test it on her laptop, in her seating position, before anything is tuned.
 
@@ -121,9 +121,10 @@ Develop on macOS, but run on Windows from milestone 1 and ship a CI-built packag
 - **Model files:** HandLandmarker and FaceLandmarker ship as `.task` bundles and the segmenter as `.tflite`. All are listed as PyInstaller data and loaded through a resource-path helper that works from source and from the frozen build. This is the most likely Mac-works, Windows-crashes bug, and milestone 2 checks it.
 - **Paths:** pathlib everywhere; no hard-coded separators.
 - **Mac camera permission:** Terminal or the IDE needs camera access in development.
-- **CI:** a GitHub Actions workflow on windows-latest installs pinned requirements, runs detection-core tests, builds the package and uploads it as an artifact.
-- **Code signing:** the build is unsigned in v1, so she should expect a SmartScreen prompt on first launch.
-- **Start with Windows:** the packaged build adds itself to the per-user `Run` registry key, toggled from settings. (A Startup-folder shortcut would need pywin32 to create the `.lnk`.)
+- **CI:** a GitHub Actions workflow runs the tests on windows-latest and macos-latest, builds the Windows app through `install.ps1` and the Mac `HandsDown.app` (Apple silicon), and uploads both. A pushed version tag publishes both as a GitHub release.
+- **Code signing:** both builds are unsigned in v1: expect a SmartScreen prompt on Windows, and a one-time "Open Anyway" in Privacy & Security on macOS (each new Mac version also asks for camera access again).
+- **Mac app:** a packaged `.app` was added after milestone 2 so the app can be shared with Mac users; it is a menu bar app (no Dock icon) and places its icon near the clock so a MacBook's notch does not hide it.
+- **Start with Windows:** the packaged build adds itself to the per-user `Run` registry key, toggled from settings. (A Startup-folder shortcut would need pywin32 to create the `.lnk`.) On macOS the same setting, "Start at login", adds a per-user LaunchAgent.
 - **Windows-only checks on her laptop:** camera coexistence with Teams (milestone 1), notification appearance and app name, startup behaviour, lighting and camera angle.
 
 ## Privacy and testing

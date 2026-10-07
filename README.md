@@ -1,6 +1,6 @@
 # Hands Down
 
-A small tray app that watches your webcam and plays a gentle sound when your hand rests on your head
+A small tray and menu bar app for Windows and macOS that watches your webcam and plays a gentle sound when your hand rests on your head
 or hair for more than a moment. It is a nudge to notice a habit, not a blocker or a scorecard.
 
 - Runs quietly in the system tray (Windows) or menu bar (macOS) while you work in other apps.
@@ -26,6 +26,27 @@ No Python or other tools needed.
 **To update:** click the ring and choose **Quit**, delete the old **HandsDown** folder, and extract
 the new release in the same place. Settings and the log are kept: they live in your user profile,
 not in the app folder.
+
+## Install on macOS (easiest)
+
+For Macs with Apple silicon (M1 or later). On an Intel Mac, see [Run from source](#run-from-source-windows-or-macos).
+
+1. Go to the [latest release](https://github.com/joshuaknipe/hands-down/releases/latest) and
+   download **HandsDown-macos.zip**.
+2. Double-click the zip to unpack it, and drag **HandsDown.app** into your **Applications** folder.
+3. Open it. The first time, macOS says it cannot check the app for malicious software, because
+   the app is not signed with a paid Apple developer account. Click **Done**, then open
+   **System Settings → Privacy & Security**, scroll down to the message about HandsDown, and click
+   **Open Anyway**. You only do this once per version.
+4. Allow camera access when asked.
+5. A thin ring appears in the menu bar, near the clock. Teal means it is watching. If your menu
+   bar is very full, a MacBook's notch can still hide it: quit an app or two that have menu bar
+   icons, then **⌘-drag** the ring to where you want it.
+6. To start it automatically: click the ring, choose **Settings…** and tick **Start at login**.
+
+**To update:** click the ring and choose **Quit**, then replace **HandsDown.app** in Applications
+with the new one. macOS treats each version as a new app, so it asks for **Open Anyway** and
+camera access again.
 
 ## Build it yourself on Windows
 
@@ -72,7 +93,7 @@ Click the ring for the menu:
   settings. Press **S** or click **Settings** in the view to open settings beside it.
 - **Summary**: today's count, time and a chart by hour, plus the last seven days.
 - **Settings…**: sound and volume, how long before an alert, repeats, the size of the zone,
-  pausing while the screen is locked, and starting with Windows. Changes apply immediately.
+  pausing while the screen is locked, and starting at sign-in. Changes apply immediately.
 - **Open log folder**: the raw log (`events.jsonl`).
 - **Quit**.
 
@@ -91,7 +112,7 @@ Without building, from the `hands-down` folder:
 .venv/bin/python -m handsdown                # macOS
 ```
 
-"Start with Windows" only works in the built app.
+"Start with Windows" and "Start at login" only work in the built app.
 
 ### macOS setup
 
@@ -105,9 +126,8 @@ python3.12 -m venv .venv
 ```
 
 macOS asks for camera permission the first time; allow it for your terminal or editor.
-On a MacBook with a notch, a crowded menu bar can hide the ring. To place it near the clock, quit
-Hands Down and run `defaults write org.python.python "NSStatusItem Preferred Position Item-0" -float 300`,
-then start it again.
+To build the app bundle yourself: `.venv/bin/pyinstaller --noconfirm packaging/handsdown.spec`
+makes `dist/HandsDown.app`.
 
 ## For developers
 
@@ -119,9 +139,10 @@ then start it again.
 - `handsdown/`: the app. Detection (`zone.py`, `episodes.py`) is pure Python and tested without a camera.
 - `feasibility/`: developer tools, including `evaluate`, which runs the detector over recorded clips.
 - `models/`: the MediaPipe hand and face models, committed so builds need no network.
-- Pushes to GitHub run the tests on Windows, then build the app with `install.ps1` (twice, to check
-  updating too) and keep the zip as an artifact in the Actions tab.
-- To publish a release, tag a version and push the tag; CI attaches `HandsDown-windows.zip`:
+- Pushes to GitHub run the tests on Windows and macOS, build the Windows app with `install.ps1`
+  (twice, to check updating too) and the Mac app bundle, and keep both zips as artifacts in the
+  Actions tab.
+- To publish a release, tag a version and push the tag; CI attaches both zips:
 
   ```bash
   git tag v0.1.0

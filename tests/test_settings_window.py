@@ -144,3 +144,46 @@ def test_autosaver_only_touches_startup_when_that_box_changes(tmp_path):
     saver.update(form_values(Settings()) | {"dwell_s": 2.0, "start_with_windows": True})
     assert calls == [True]
     assert load_settings(tmp_path / "settings.json").start_with_windows is False
+
+
+def fake_app(monkeypatch, tmp_path):
+    executable = tmp_path / "Applications" / "HandsDown.app" / "Contents" / "MacOS" / "HandsDown"
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(sys, "executable", str(executable))
+    return executable.parents[2]
+
+
+def test_packaged_mac_app_adds_and_removes_a_login_item(monkeypatch, tmp_path):
+    import plistlib
+
+    bundle = fake_app(monkeypatch, tmp_path)
+    agents = tmp_path / "LaunchAgents"
+    assert startup.set_start_at_login_mac(True, agents_dir=agents) is True
+    plist = plistlib.loads((agents / startup.LAUNCH_AGENT_FILE).read_bytes())
+    assert plist["ProgramArguments"] == ["/usr/bin/open", "-a", str(bundle)]
+    assert plist["RunAtLoad"] is True and plist["Label"] == startup.LAUNCH_AGENT_LABEL
+    assert startup.set_start_at_login_mac(False, agents_dir=agents) is False
+    assert not (agents / startup.LAUNCH_AGENT_FILE).exists()
+    assert startup.set_start_at_login_mac(False, agents_dir=agents) is False  # already off is fine
+
+
+def test_mac_from_source_never_adds_a_login_item(tmp_path):
+    agents = tmp_path / "LaunchAgents"
+    assert startup.set_start_at_login_mac(True, agents_dir=agents) is False
+    assert not agents.exists()
+
+
+def test_start_at_login_picks_the_platform(monkeypatch, tmp_path):
+    calls = []
+    monkeypatch.setattr(startup, "set_start_with_windows", lambda enabled: calls.append(("win", enabled)) or True)
+    monkeypatch.setattr(startup, "set_start_at_login_mac", lambda enabled: calls.append(("mac", enabled)) or True)
+    assert startup.set_start_at_login(True, platform="win32") is True
+    assert startup.set_start_at_login(True, platform="darwin") is True
+    assert startup.set_start_at_login(True, platform="linux") is False
+    assert calls == [("win", True), ("mac", True)]
+
+
+def test_startup_label_names_the_platform():
+    assert startup.startup_label("win32") == "Start with Windows"
+    assert startup.startup_label("darwin") == "Start at login"
+    assert startup.startup_label("linux") is None
