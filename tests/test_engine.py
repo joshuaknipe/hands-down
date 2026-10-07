@@ -206,3 +206,36 @@ def test_unlocking_during_a_manual_pause_stays_paused(tmp_path):
     h.locked = False
     h.run(1.0)
     assert h.states[-1] == "paused" and h.engine.paused
+
+
+def test_frame_sink_sees_each_frame_with_its_contact(tmp_path):
+    h = Harness(tmp_path)
+    seen = []
+    h.engine.frame_sink = lambda frame, observation, touching, settings: seen.append((touching, settings))
+    h.world["observation"] = Observation(0, (TEMPLE,), True, FACE)
+    h.run(0.5)
+    assert seen == [(True, Settings())] * 4
+
+
+def test_zone_shape_settings_reach_the_detector(tmp_path):
+    h = Harness(tmp_path, settings=Settings(zone_above=0.0))
+    h.world["observation"] = Observation(0, (tuple((0.5, 0.15) for _ in range(21)),), True, FACE)  # top of head
+    h.run(2.0)
+    assert h.alerts == []
+    h.settings = Settings()
+    h.run(1.0)
+    assert h.alerts == ["alert"]
+
+
+def test_a_failing_frame_sink_is_dropped_and_the_engine_keeps_going(tmp_path):
+    h = Harness(tmp_path)
+
+    def broken(*args):
+        raise RuntimeError("viewer exploded")
+
+    h.engine.frame_sink = broken
+    h.world["observation"] = Observation(0, (TEMPLE,), True, FACE)
+    h.run(1.0)
+    assert h.alerts == ["alert"] and h.engine.frame_sink is None
+    errors = [r for r in h.log.read() if r["kind"] == "error"]
+    assert len(errors) == 1 and "viewer exploded" in errors[0]["message"]

@@ -12,16 +12,25 @@ from handsdown.camera import open_first_camera
 from handsdown.engine import Engine
 from handsdown.eventlog import EventLog
 from handsdown.paths import log_dir, settings_path
+from handsdown.preview import CameraView, annotate, encode
 from handsdown.settings import SettingsStore
 from handsdown.tray import STATE_LABELS, draw_icon, menu_items
 
 PAUSES = {"pause_call": (None, "call"), "pause_15": (15 * 60, "15 min"), "pause_60": (60 * 60, "1 hour")}
 
 
-def settings_command() -> list[str]:
+def _command(flag: str) -> list[str]:
     if getattr(sys, "frozen", False):
-        return [sys.executable, "--settings"]
-    return [sys.executable, "-m", "handsdown", "--settings"]
+        return [sys.executable, flag]
+    return [sys.executable, "-m", "handsdown", flag]
+
+
+def settings_command() -> list[str]:
+    return _command("--settings")
+
+
+def camera_view_command() -> list[str]:
+    return _command("--camera-view")
 
 
 def open_folder(folder) -> None:
@@ -55,6 +64,13 @@ def run_app() -> int:
         icon.update_menu()
 
     engine = Engine(store.get, log, alerter.alert, on_state, open_first_camera)
+    view = CameraView(camera_view_command())
+
+    def show(frame, observation, touching: bool, settings) -> None:
+        if view.is_open:
+            view.send(encode(annotate(frame, observation, settings, touching)))
+
+    engine.frame_sink = show
 
     def act(action: str) -> None:
         if action in PAUSES:
@@ -64,11 +80,16 @@ def run_app() -> int:
             engine.resume()
         elif action == "false_alert":
             engine.mark_false_alert()
+        elif action == "show_camera":
+            view.open()
+        elif action == "hide_camera":
+            view.close()
         elif action == "settings":
             subprocess.Popen(settings_command())
         elif action == "open_log":
             open_folder(log_dir())
         elif action == "quit":
+            view.close()
             engine.stop()
             icon.stop()
         icon.update_menu()
@@ -76,11 +97,16 @@ def run_app() -> int:
     def item(entry):
         return pystray.MenuItem(entry.label, lambda: act(entry.action), enabled=entry.enabled)
 
-    icon.menu = pystray.Menu(lambda: (item(entry) for entry in menu_items(engine.state, engine.paused)))
+    icon.menu = pystray.Menu(lambda: (item(entry) for entry in menu_items(engine.state, engine.paused, view.is_open)))
+
+    engine_thread = threading.Thread(target=engine.run, name="engine", daemon=True)
 
     def setup(tray_icon) -> None:
         tray_icon.visible = True
-        threading.Thread(target=engine.run, name="engine", daemon=True).start()
+        engine_thread.start()
 
     icon.run(setup=setup)
+    engine.stop()
+    if engine_thread.is_alive():
+        engine_thread.join(timeout=3)  # let it release the camera and log "stop"
     return 0

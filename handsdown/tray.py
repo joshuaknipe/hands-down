@@ -37,7 +37,7 @@ class MenuItem:
     enabled: bool = True
 
 
-def menu_items(state: str | None, paused: bool) -> list[MenuItem]:
+def menu_items(state: str | None, paused: bool, camera_open: bool = False) -> list[MenuItem]:
     items = [MenuItem(STATE_LABELS.get(state, STATE_LABELS[None]), None, enabled=False)]
     if paused:
         items.append(MenuItem("Resume", "resume"))
@@ -49,6 +49,7 @@ def menu_items(state: str | None, paused: bool) -> list[MenuItem]:
         ]
     items += [
         MenuItem("That wasn't me", "false_alert"),
+        MenuItem("Hide camera", "hide_camera") if camera_open else MenuItem("Show camera", "show_camera"),
         MenuItem("Settings…", "settings"),
         MenuItem("Open log folder", "open_log"),
         MenuItem("Quit", "quit"),

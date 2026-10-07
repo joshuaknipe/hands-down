@@ -51,3 +51,22 @@ def test_wider_margin_reaches_further():
     hand = hand_at(0.27, 0.4)
     assert not hand_in_zone(hand, head_zone(FACE, 0.5))
     assert hand_in_zone(hand, head_zone(FACE, 0.8))
+
+
+def test_reach_above_and_below_are_adjustable():
+    zone = head_zone(FACE, margin=0.5, above=0.0, below=0.0)
+    assert zone.outer == pytest.approx((0.3, 0.3, 0.7, 0.6))
+    assert not hand_in_zone(hand_at(0.5, 0.15), zone)  # top of the head is now outside
+
+
+def test_chin_cut_out_can_be_turned_off_or_enlarged():
+    assert head_zone(FACE, 0.5, cutout=0.0).excluded is None
+    assert hand_in_zone(hand_at(0.5, 0.6), head_zone(FACE, 0.5, cutout=0.0))  # chin now counts
+    big = head_zone(FACE, 0.5, cutout=2.0).excluded
+    assert big == pytest.approx((0.38, 0.345, 0.62, 0.825))  # twice the size, same centre
+
+
+def test_contact_passes_the_zone_shape_through():
+    top = (hand_at(0.5, 0.15),)
+    assert contact(Observation(0, top, True, FACE), 0.5)
+    assert not contact(Observation(0, top, True, FACE), 0.5, above=0.0)

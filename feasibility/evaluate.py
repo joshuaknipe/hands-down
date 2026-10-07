@@ -27,7 +27,7 @@ def outcome_from(label: str, split: str, video: str, observations, settings: Set
     alerted_at = None
     for o in observations:
         now = o.timestamp_ms / 1000
-        hit = contact(o, settings.zone_margin)
+        hit = contact(o, settings.zone_margin, settings.zone_above, settings.zone_below, settings.chin_cutout)
         touching += hit
         for event in tracker.update(now, hit):
             if event.kind == "alert" and alerted_at is None:

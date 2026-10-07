@@ -20,6 +20,9 @@ class Settings:
     release_s: float = 3.0  # an episode ends after this long with no contact
     reminder_s: float = 0.0  # repeat the alert after this long in one episode; 0 is off
     zone_margin: float = 0.5  # how far the head zone reaches beside the face, in face widths
+    zone_above: float = 0.7  # how far it reaches above the face, in face heights
+    zone_below: float = 0.8  # how far it reaches below the chin, in face heights
+    chin_cutout: float = 1.0  # size of the ignored mouth and chin area; 0 is off
     chime: bool = True
     sound: str = "chime"  # one of SOUNDS
     volume: str = "normal"  # one of VOLUMES
@@ -35,6 +38,9 @@ LIMITS = {
     "release_s": (0.5, 30.0),
     "reminder_s": (0.0, 600.0),
     "zone_margin": (0.1, 1.5),
+    "zone_above": (0.0, 1.5),
+    "zone_below": (0.0, 2.0),
+    "chin_cutout": (0.0, 2.0),
     "camera_index": (0, 9),
 }
 

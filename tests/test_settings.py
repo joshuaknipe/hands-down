@@ -67,3 +67,11 @@ def test_unknown_sound_or_volume_falls_back_to_the_default(tmp_path):
     assert loaded.sound == Settings().sound and loaded.volume == Settings().volume
     assert loaded.pause_when_locked is True
     assert clamp(Settings(sound="nope", volume="loud")) == Settings()
+
+
+def test_zone_shape_settings_are_clamped():
+    loaded = clamp(Settings(zone_above=-1.0, zone_below=9.0, chin_cutout=5.0))
+    assert loaded.zone_above == LIMITS["zone_above"][0]
+    assert loaded.zone_below == LIMITS["zone_below"][1]
+    assert loaded.chin_cutout == LIMITS["chin_cutout"][1]
+    assert LIMITS["chin_cutout"][0] == 0.0  # off is allowed

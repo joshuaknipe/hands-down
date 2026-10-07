@@ -48,6 +48,7 @@ class Engine:
         self._episodes = EpisodeTracker(Timing())
         self._last_alert_wall: datetime | None = None
         self.state: str | None = None
+        self.frame_sink = None  # called with (frame, observation, contact, settings) while the camera view is open
 
     # Called from the tray thread.
 
@@ -152,8 +153,21 @@ class Engine:
         tracking = self._last_face is not None and now - self._last_face <= NOT_TRACKING_AFTER_S
         self._set_state("watching" if tracking else "not_tracking")
         self._episodes.timing = Timing(settings.dwell_s, settings.grace_s, settings.release_s, settings.reminder_s)
-        for event in self._episodes.update(now, contact(observation, settings.zone_margin)):
+        touching = contact(observation, settings.zone_margin, settings.zone_above, settings.zone_below,
+                           settings.chin_cutout)
+        for event in self._episodes.update(now, touching):
             self._handle(event)
+        self._show(frame, observation, touching, settings)
+
+    def _show(self, frame, observation, touching: bool, settings: Settings) -> None:
+        sink = self.frame_sink
+        if sink is None:
+            return
+        try:
+            sink(frame, observation, touching, settings)
+        except Exception as exc:
+            self.frame_sink = None  # a broken view must never stop detection
+            self._log.write("error", message=f"Camera view failed: {exc}")
 
     def _handle(self, event: Event) -> None:
         if event.kind in ("alert", "reminder"):
