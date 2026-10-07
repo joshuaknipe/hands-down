@@ -6,7 +6,7 @@ Oct 7, 2026 · @Joshua Knipe
 
 Halo is a small desktop app that watches the webcam and gently alerts the user when her hand stays on her hair, to interrupt a hand-to-hair habit while she works at her laptop.
 
-- **Primary user:** one person, on a Windows laptop, working in other apps for hours at a time, including video calls.
+- **Primary user:** one person, on a Windows 11 laptop, working in other apps for hours at a time, including video calls in the Teams desktop app. She has agreed to record test clips on her laptop.
 - **Goal:** raise awareness at the moment the hand reaches her hair, as an awareness prompt. It is a nudge, not a blocker or a scorecard.
 - **Success:** alerts fire on real episodes with few enough false alarms, and little enough friction around calls, that she keeps it running all day. "Few enough" is defined by the acceptance criteria below.
 - **Out of scope for v1:** mobile, multi-user accounts, cloud sync, analytics dashboards, screen-edge flash alerts, a packaged Mac build.
@@ -17,7 +17,7 @@ Halo is a small desktop app that watches the webcam and gently alerts the user w
 
 Each milestone ends with a go / no-go decision. Platform problems are found on Windows early, not after weeks of tuning on the Mac.
 
-1. **Feasibility on her laptop.** A minimal script, run from source on her Windows laptop.
+1. **Feasibility on her laptop.** A minimal script, run from source on her Windows laptop (Python is installed there for this).
    - Does HandLandmarker find her hand during real hand-to-hair motions, at her camera angle and with as much of her head as her webcam frames?
    - Camera coexistence: start Halo then Teams, and Teams then Halo. Record what happens with the OpenCV backends, and whether Windows shared camera access is available on her machine (see Camera sharing and calls).
    - Go if her hand is found during most real motions and there is a workable answer for calls. No-go means fixing framing or camera angle first, or rethinking the approach.
