@@ -79,3 +79,10 @@ def test_load_clips_skips_orphans_and_corrupt_metadata(tmp_path):
 
 def test_load_clips_from_a_missing_folder_is_empty(tmp_path):
     assert clips.load_clips(tmp_path / "nothing-here") == []
+
+
+def test_every_label_has_an_instruction_and_a_target():
+    for label in clips.LABELS:
+        assert clips.LABEL_GUIDE[label]
+    assert clips.target_clips("hair_crown") == 4
+    assert clips.target_clips("chin_rest") == 2

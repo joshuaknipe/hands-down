@@ -17,6 +17,25 @@ LABELS = TRUE_POSITIVE_LABELS + FALSE_POSITIVE_LABELS
 SPLITS = ("dev", "holdout")
 HOLDOUT_EVERY = 4  # every 4th clip of a label is kept back for evaluation only
 
+# What to do for each label, shown in the recorder window.
+LABEL_GUIDE = {
+    "hair_scalp": "Fingers in the hair on top or at the front of the head",
+    "hair_crown": "Fingers in the hair at the back or crown",
+    "hair_side": "Fingers in the hair beside the face or at the temple",
+    "hair_long": "Fingers in long hair below the jaw or over the shoulder",
+    "ear_tuck": "Tucking hair behind an ear",
+    "chin_rest": "Chin resting on the hand",
+    "cheek_rest": "Cheek resting on the hand",
+    "glasses": "Adjusting glasses",
+    "drinking": "Drinking from a cup or bottle",
+    "phone": "Phone held to the ear",
+}
+
+
+def target_clips(label: str) -> int:
+    """Clips to record per label: 4 for hair labels (one is held out), 2 for the others."""
+    return HOLDOUT_EVERY if label in TRUE_POSITIVE_LABELS else 2
+
 
 @dataclass
 class ClipMeta:

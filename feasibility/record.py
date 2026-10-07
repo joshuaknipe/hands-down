@@ -10,7 +10,8 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from feasibility.clips import LABELS, Clip, ClipMeta, assign_split, count_clips, new_clip_paths, save_meta
+from feasibility.clips import LABEL_GUIDE, LABELS, Clip, ClipMeta, assign_split, count_clips, new_clip_paths, save_meta
+from feasibility.guide import GuidedSession
 from handsdown.camera import Backend, open_camera
 from handsdown.landmarks import Observation, Tracker
 
@@ -86,7 +87,7 @@ class ClipRecorder:
         return Clip(self._video, meta)
 
 
-def draw_overlay(frame: np.ndarray, observation: Observation | None, recording: bool, label: str, saved: int) -> np.ndarray:
+def draw_overlay(frame: np.ndarray, observation: Observation | None, recording: bool, lines: list[str]) -> np.ndarray:
     h, w = frame.shape[:2]
     if observation is not None:
         for hand in observation.hands:
@@ -94,9 +95,12 @@ def draw_overlay(frame: np.ndarray, observation: Observation | None, recording: 
                 cv2.circle(frame, (int(x * w), int(y * h)), 3, (0, 255, 0), -1)
         status = f"hand: {'yes' if observation.hand_found else 'no'}   face: {'yes' if observation.face_found else 'no'}"
         cv2.putText(frame, status, (10, h - 15), FONT, 0.6, (255, 255, 255), 2)
-    cv2.putText(frame, f"{label}   saved: {saved}", (10, 25), FONT, 0.6, (255, 255, 255), 2)
+    band = 12 + 24 * len(lines)
+    frame[:band] = (frame[:band] * 0.35).astype(frame.dtype)  # darken so the instructions stay readable
+    for i, line in enumerate(lines):
+        cv2.putText(frame, line, (10, 28 + 24 * i), FONT, 0.55, (255, 255, 255), 1, cv2.LINE_AA)
     if recording:
-        cv2.circle(frame, (w - 25, 25), 10, (0, 0, 255), -1)
+        cv2.circle(frame, (w - 25, h - 25), 10, (0, 0, 255), -1)
     return frame
 
 
@@ -108,7 +112,12 @@ def _report(clip: Clip | None) -> None:
         print(f"  saved {clip.video.name}: {len(clip.meta.timestamps_ms)} frames, {seconds:.1f} s, {clip.meta.split}")
 
 
-def run_record(label: str, camera_index: int, backend: Backend, clips_dir: Path) -> int:
+def _announce(session: GuidedSession) -> None:
+    print(f"Now: {session.label} - {LABEL_GUIDE[session.label]}")
+
+
+def run_record(label: str | None, camera_index: int, backend: Backend, clips_dir: Path) -> int:
+    """Record clips for one label, or with no label walk through every label in turn."""
     result = open_camera(camera_index, backend)
     if not result.ok:
         print(f"Could not open camera {camera_index} with {backend.name}: {result.error}")
@@ -119,8 +128,17 @@ def run_record(label: str, camera_index: int, backend: Backend, clips_dir: Path)
         print("The camera stopped delivering frames.")
         capture.release()
         return 1
-    recorder = ClipRecorder(clips_dir, label, backend.name, (frame.shape[1], frame.shape[0]))
-    print(f"Recording '{label}' ({recorder.saved} saved so far). SPACE starts and stops a clip; Q or Esc quits.")
+    size = (frame.shape[1], frame.shape[0])
+    session = GuidedSession(clips_dir, (label,) if label else LABELS)
+    recorders: dict[str, ClipRecorder] = {}
+
+    def recorder() -> ClipRecorder:
+        if session.label not in recorders:
+            recorders[session.label] = ClipRecorder(clips_dir, session.label, backend.name, size)
+        return recorders[session.label]
+
+    print("Follow the instructions at the top of the window. Click the window first so it receives key presses.")
+    _announce(session)
     observation = None
     frame_no = 0
     failed = 0
@@ -136,25 +154,34 @@ def run_record(label: str, camera_index: int, backend: Backend, clips_dir: Path)
                         break
                     continue
                 failed = 0
-                recorder.add(frame)
+                current = recorder()
+                current.add(frame)
                 if frame_no % PREVIEW_TRACK_EVERY == 0:
                     observation = tracker.process(frame, int((time.monotonic() - started) * 1000))
                 frame_no += 1
-                cv2.imshow(WINDOW, draw_overlay(frame.copy(), observation, recorder.recording, label, recorder.saved))
+                lines = session.lines(current.recording)
+                cv2.imshow(WINDOW, draw_overlay(frame.copy(), observation, current.recording, lines))
                 key = cv2.waitKey(1) & 0xFF
                 if key == ord(" "):
-                    if recorder.recording:
-                        _report(recorder.stop())
+                    if current.recording:
+                        _report(current.stop())
+                        if session.complete(session.label) and not session.finished:
+                            session.advance_to_incomplete()
+                            _announce(session)
                     else:
-                        recorder.start()
+                        current.start()
                         print("  recording...")
+                elif key in (ord("n"), ord("p")) and not current.recording:
+                    session.advance() if key == ord("n") else session.back()
+                    _announce(session)
                 elif key in (ord("q"), 27):
                     break
                 if cv2.getWindowProperty(WINDOW, cv2.WND_PROP_VISIBLE) < 1:
                     break  # window closed with the mouse
     finally:
-        if recorder.recording:  # Q, a closed window, Ctrl+C or a crash mid-clip still finalises the file
-            _report(recorder.stop())
+        for rec in recorders.values():
+            if rec.recording:  # Q, a closed window, Ctrl+C or a crash mid-clip still finalises the file
+                _report(rec.stop())
         capture.release()
         cv2.destroyAllWindows()
     return 0

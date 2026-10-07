@@ -51,6 +51,8 @@ Hands Down is a native Python tray app, developed on macOS and shipped to Window
 
 An alert fires when a hand touches hair anywhere it hangs, from the scalp to long hair below the jaw, and holds for longer than a dwell time. Any hair contact counts: touching, stroking, twirling or gripping, including tucking hair behind an ear. There is no grip or gesture check.
 
+**Crown is out of scope for v1.** A front-facing webcam loses a hand once it is behind the head: in the Mac rehearsal (2026-10-07), the hand was found in 1–25% of frames for crown clips, against 92–100% for every other position. The detection does not need to be perfect, so missing the occasional episode at the crown is accepted. If that changes, the fallback is a raised-arm signal from pose landmarks (elbow and wrist up beside the head stay visible when the hand does not).
+
 - **Stage 1, head zone (baseline):** a zone around the head, extending down over the shoulders to cover long hair, built from face or pose landmarks. How well it holds up in poor light is measured in milestones 1 and 3, not assumed.
 - **Stage 2, hair mask (milestone 4, if needed):** contact is checked against where her hair actually is, so a hand on the cheek or chin does not count.
 

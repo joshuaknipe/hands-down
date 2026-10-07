@@ -98,13 +98,16 @@ def test_unknown_label_is_rejected(tmp_path):
 
 
 def test_overlay_marks_landmarks_and_recording():
-    image = np.zeros((480, 640, 3), np.uint8)
+    image = np.full((480, 640, 3), 200, np.uint8)
     observation = Observation(0, (((0.5, 0.5),),), True)
-    out = draw_overlay(image, observation, recording=True, label="hair_scalp", saved=2)
+    out = draw_overlay(image, observation, recording=True, lines=["hair_scalp", "Do this"])
     assert tuple(out[240, 320]) == (0, 255, 0)  # landmark dot at the centre
-    assert tuple(out[25, 615]) == (0, 0, 255)  # red recording dot top right
+    assert tuple(out[455, 615]) == (0, 0, 255)  # red recording dot bottom right
 
 
-def test_overlay_without_observation_or_recording():
-    out = draw_overlay(np.zeros((480, 640, 3), np.uint8), None, recording=False, label="chin_rest", saved=0)
-    assert tuple(out[25, 615]) == (0, 0, 0)
+def test_overlay_darkens_a_band_behind_the_instructions():
+    image = np.full((480, 640, 3), 200, np.uint8)
+    out = draw_overlay(image, None, recording=False, lines=["one", "two", "three"])
+    assert out[5, 630].max() < 100  # band behind the text is darkened
+    assert tuple(out[300, 630]) == (200, 200, 200)  # the rest of the frame is untouched
+    assert tuple(out[455, 615]) == (200, 200, 200)  # no recording dot

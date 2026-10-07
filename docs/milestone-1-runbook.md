@@ -53,12 +53,34 @@ If a backend gets stuck, press Ctrl+C, then rerun with the remaining backends on
 
 ## 4. Record clips
 
-She sits as she normally works. For each label, run the command, then for each clip:
-get her hand into position first, press **Space**, do what her hand naturally does there for
-5–10 seconds, press **Space** again. **Q** quits. The preview shows green dots when a hand is
-found; that is for reassurance only and is not saved.
+She sits as she normally works. Run:
 
-Record **4 clips for each of these** (the 4th of each is set aside for later evaluation):
+```
+python -m feasibility record
+```
+
+A window opens showing the camera. **Click the window first** so it receives key presses.
+The top of the window says which position to record, what to do and which clip she is on.
+The clips measure whether the camera can see her hand while it is in each position, so the
+hand must be in position for the **whole** clip. For each clip:
+
+1. Put one hand in the position shown, and keep the other hand near the **Space** bar.
+2. Press **Space** with the other hand.
+3. Keep the first hand there for 5–10 seconds, doing what it naturally does there: touching,
+   twirling, stroking, gripping. Keep it moving rather than frozen.
+4. Press **Space** again with the other hand, then move the first hand away.
+
+After the last clip for a position, the window moves on to the next one by itself.
+
+- **N** / **P** skip to the next or previous position (for example to come back to one later).
+- **Q** quits. Running `record` again resumes at the first position that still needs clips.
+- To redo one position only: `python -m feasibility record --label hair_crown`.
+
+The green dots on her hand show tracking is working; they are not saved. A red dot in the
+bottom-right corner means a clip is recording.
+
+It asks for 4 clips of each hair position (the 4th is set aside for later evaluation) and 2 of
+each other position (those are for later milestones). The positions, in order:
 
 | Label | Hand position |
 | --- | --- |
@@ -67,22 +89,11 @@ Record **4 clips for each of these** (the 4th of each is set aside for later eva
 | `hair_side` | fingers in the hair beside the face or at the temple |
 | `hair_long` | fingers in long hair below the jaw or over the shoulder |
 | `ear_tuck` | tucking hair behind an ear |
-
-Record **2 clips for each of these** (they are for later milestones):
-
-| Label | Hand position |
-| --- | --- |
 | `chin_rest` | chin resting on the hand |
 | `cheek_rest` | cheek resting on the hand |
 | `glasses` | adjusting glasses |
 | `drinking` | drinking from a cup or bottle |
 | `phone` | phone held to the ear |
-
-Example:
-
-```
-python -m feasibility record --label hair_scalp
-```
 
 Clips are saved in the `clips` folder on this laptop only. They are never uploaded and git
 ignores them. She can watch or delete any clip at any time; delete a clip's `.mp4` and `.json`

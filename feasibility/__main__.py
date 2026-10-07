@@ -18,7 +18,7 @@ def main(argv: list[str] | None = None) -> int:
     probe.add_argument("--seconds", type=float, default=3.0, help="how long to read from each backend")
 
     record = sub.add_parser("record", help="Record labelled clips with live tracking")
-    record.add_argument("--label", required=True, help="where the hand is, e.g. hair_scalp or chin_rest")
+    record.add_argument("--label", default=None, help="record one label only (default: walk through all labels)")
     record.add_argument("--camera", type=int, default=0, help="camera index (default 0)")
     record.add_argument("--backend", default=None, help="camera backend (default: the first for this OS)")
 
@@ -40,7 +40,7 @@ def main(argv: list[str] | None = None) -> int:
         from feasibility.record import run_record
         from handsdown.paths import clips_dir
 
-        if args.label not in LABELS:
+        if args.label is not None and args.label not in LABELS:
             parser.error(f"--label must be one of: {', '.join(LABELS)}")
         backend = backend_by_name(args.backend) if args.backend else backends_for_platform()[0]
         return run_record(args.label, args.camera, backend, clips_dir())
