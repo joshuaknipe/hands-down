@@ -144,6 +144,10 @@ def run_session(backends: list[str], opener, ask, say, observe_seconds: float = 
 
 def make_opener(camera_index: int) -> Callable[[str], OpenResult]:
     def opener(name: str) -> OpenResult:
+        if name == WINRT_SHARED:
+            from feasibility import winrt_probe
+
+            return winrt_probe.open_shared()
         result = open_camera(camera_index, backend_by_name(name))
         if result.ok:
             result.capture = OpenCvSource(result.capture)
@@ -153,4 +157,9 @@ def make_opener(camera_index: int) -> Callable[[str], OpenResult]:
 
 
 def default_backends() -> list[str]:
-    return [backend.name for backend in backends_for_platform()]
+    from feasibility.winrt_probe import winrt_available
+
+    names = [backend.name for backend in backends_for_platform()]
+    if winrt_available():
+        names.append(WINRT_SHARED)
+    return names
