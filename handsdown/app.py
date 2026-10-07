@@ -9,6 +9,7 @@ import pystray
 
 from handsdown.alerts import Alerter, mac_notify, play_chime
 from handsdown.camera import open_first_camera
+from handsdown.commands import camera_view_command, settings_command, summary_command
 from handsdown.engine import Engine
 from handsdown.eventlog import EventLog
 from handsdown.paths import log_dir, settings_path
@@ -18,24 +19,6 @@ from handsdown.single import acquire
 from handsdown.tray import STATE_LABELS, draw_icon, menu_items, place_menu_bar_icon
 
 PAUSES = {"pause_call": (None, "call"), "pause_15": (15 * 60, "15 min"), "pause_60": (60 * 60, "1 hour")}
-
-
-def _command(flag: str) -> list[str]:
-    if getattr(sys, "frozen", False):
-        return [sys.executable, flag]
-    return [sys.executable, "-m", "handsdown", flag]
-
-
-def settings_command() -> list[str]:
-    return _command("--settings")
-
-
-def camera_view_command() -> list[str]:
-    return _command("--camera-view")
-
-
-def summary_command() -> list[str]:
-    return _command("--summary")
 
 
 def open_folder(folder) -> None:

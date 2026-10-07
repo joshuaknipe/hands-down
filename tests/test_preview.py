@@ -161,3 +161,15 @@ def test_viewer_exits_cleanly_while_its_reader_waits_on_stdin():
         process.stdin.close()
     assert process.returncode == 0, err.decode()
     assert b"Fatal Python error" not in err
+
+
+def test_the_viewer_does_not_load_the_vision_models_library():
+    """The camera view only shows pictures; loading MediaPipe made it take seconds to open."""
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    script = "import sys, handsdown.preview, handsdown.commands; print('mediapipe' in sys.modules)"
+    root = Path(__file__).resolve().parent.parent
+    out = subprocess.run([sys.executable, "-c", script], cwd=root, capture_output=True, text=True, timeout=60)
+    assert out.stdout.strip() == "False", out.stderr

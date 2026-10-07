@@ -19,7 +19,7 @@ def main(argv: list[str] | None = None) -> int:
     if "--camera-view" in args:
         import subprocess
 
-        from handsdown.app import settings_command
+        from handsdown.commands import settings_command
         from handsdown.preview import end_viewer, run_viewer
 
         window = [None]

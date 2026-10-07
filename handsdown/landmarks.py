@@ -3,10 +3,7 @@
 from dataclasses import dataclass
 
 import cv2
-import mediapipe as mp
 import numpy as np
-from mediapipe.tasks.python import vision
-from mediapipe.tasks.python.core.base_options import BaseOptions
 
 from handsdown.paths import model_path
 
@@ -52,6 +49,12 @@ class Tracker:
     """
 
     def __init__(self, num_hands: int = 2):
+        # Imported here so code that only needs Observation (the camera view, the zone) stays light.
+        import mediapipe as mp
+        from mediapipe.tasks.python import vision
+        from mediapipe.tasks.python.core.base_options import BaseOptions
+
+        self._mp = mp
         self._hands = vision.HandLandmarker.create_from_options(vision.HandLandmarkerOptions(
             base_options=BaseOptions(model_asset_path=str(model_path("hand_landmarker.task"))),
             running_mode=vision.RunningMode.VIDEO,
@@ -66,7 +69,7 @@ class Tracker:
     def process(self, frame_bgr: np.ndarray, timestamp_ms: int) -> Observation:
         timestamp_ms = self._guard.next(int(timestamp_ms))
         rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
-        image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
+        image = self._mp.Image(image_format=self._mp.ImageFormat.SRGB, data=rgb)
         hands = self._hands.detect_for_video(image, timestamp_ms)
         face = self._face.detect_for_video(image, timestamp_ms)
         face_box = bounding_box([(lm.x, lm.y) for lm in face.face_landmarks[0]]) if face.face_landmarks else None
