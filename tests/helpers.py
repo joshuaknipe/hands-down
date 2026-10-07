@@ -34,3 +34,17 @@ class FakeCapture:
 
     def release(self) -> None:
         self.released = True
+
+
+class ScriptedAsk:
+    """Stands in for input(): returns scripted answers in order and records each prompt."""
+
+    def __init__(self, answers):
+        self.answers = list(answers)
+        self.prompts = []
+
+    def __call__(self, prompt: str) -> str:
+        self.prompts.append(prompt)
+        if not self.answers:
+            raise AssertionError(f"Unexpected prompt: {prompt}")
+        return self.answers.pop(0)

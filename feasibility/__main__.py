@@ -24,6 +24,11 @@ def main(argv: list[str] | None = None) -> int:
 
     sub.add_parser("analyse", help="Measure hand visibility in recorded clips and give a verdict")
 
+    co = sub.add_parser("coexist", help="Test camera sharing with Teams in both launch orders")
+    co.add_argument("--camera", type=int, default=0, help="camera index (default 0)")
+    co.add_argument("--backends", default=None, help="comma-separated backends (default: all for this OS)")
+    co.add_argument("--observe", type=float, default=15.0, help="seconds both apps run together per trial")
+
     args = parser.parse_args(argv)
 
     if args.command == "probe":
@@ -44,6 +49,17 @@ def main(argv: list[str] | None = None) -> int:
         from handsdown.paths import clips_dir, reports_dir
 
         return run_analyse(clips_dir(), reports_dir())
+    if args.command == "coexist":
+        from datetime import datetime
+
+        from feasibility.coexist import default_backends, make_opener, run_session
+        from feasibility.report import write_report
+        from handsdown.paths import reports_dir
+
+        backends = args.backends.split(",") if args.backends else default_backends()
+        report = run_session(backends, make_opener(args.camera), ask=input, say=print, observe_seconds=args.observe)
+        print(f"Report written to {write_report(reports_dir(), 'coexist', report, datetime.now())}")
+        return 0
     return 2
 
 
