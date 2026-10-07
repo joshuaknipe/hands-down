@@ -9,3 +9,28 @@ class FakeClock:
 
     def __call__(self) -> float:
         return self.now
+
+
+class FakeCapture:
+    """Stands in for cv2.VideoCapture: replays a list of (ok, frame) reads."""
+
+    def __init__(self, opened: bool = True, reads=()):
+        self.opened = opened
+        self.reads = list(reads)
+        self.released = False
+        self.props = {}
+
+    def isOpened(self) -> bool:
+        return self.opened
+
+    def set(self, prop, value) -> bool:
+        self.props[prop] = value
+        return True
+
+    def read(self):
+        if not self.reads:
+            return False, None
+        return self.reads.pop(0)
+
+    def release(self) -> None:
+        self.released = True
