@@ -26,3 +26,6 @@ reports/
 Thumbs.db
 .vscode/
 .idea/
+
+# Agent progress notes
+.superpowers/
