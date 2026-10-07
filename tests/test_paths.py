@@ -3,7 +3,7 @@ import sys
 
 import pytest
 
-from halo import paths
+from handsdown import paths
 
 
 def test_resource_path_from_source_is_under_project_root():

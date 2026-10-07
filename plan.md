@@ -1,17 +1,17 @@
-# Halo — Design Decisions
+# Hands Down — Design Decisions
 
 Oct 7, 2026 · @Joshua Knipe
 
 ## Purpose
 
-Halo is a small desktop app that watches the webcam and gently alerts the user when her hand stays on her hair, to interrupt a hand-to-hair habit while she works at her laptop.
+Hands Down is a small desktop app that watches the webcam and gently alerts the user when her hand stays on her hair, to interrupt a hand-to-hair habit while she works at her laptop.
 
 - **Primary user:** one person, on a Windows 11 laptop, working in other apps for hours at a time, including video calls in the Teams desktop app. She has agreed to record test clips on her laptop.
 - **Goal:** raise awareness at the moment the hand reaches her hair, as an awareness prompt. It is a nudge, not a blocker or a scorecard.
 - **Success:** alerts fire on real episodes with few enough false alarms, and little enough friction around calls, that she keeps it running all day. "Few enough" is defined by the acceptance criteria below.
 - **Out of scope for v1:** mobile, multi-user accounts, cloud sync, analytics dashboards, screen-edge flash alerts, a packaged Mac build.
 
-**Central uncertainty.** Halo assumes that a visible hand near her hair is a good enough stand-in for her actual habit. Nothing else in this plan matters if that is false, so the first milestone exists to test it on her laptop, in her seating position, before anything is tuned.
+**Central uncertainty.** Hands Down assumes that a visible hand near her hair is a good enough stand-in for her actual habit. Nothing else in this plan matters if that is false, so the first milestone exists to test it on her laptop, in her seating position, before anything is tuned.
 
 ## Milestones
 
@@ -19,7 +19,7 @@ Each milestone ends with a go / no-go decision. Platform problems are found on W
 
 1. **Feasibility on her laptop.** A minimal script, run from source on her Windows laptop (Python is installed there for this).
    - Does HandLandmarker find her hand during real hand-to-hair motions, at her camera angle and with as much of her head as her webcam frames?
-   - Camera coexistence: start Halo then Teams, and Teams then Halo. Record what happens with the OpenCV backends, and whether Windows shared camera access is available on her machine (see Camera sharing and calls).
+   - Camera coexistence: start Hands Down then Teams, and Teams then Hands Down. Record what happens with the OpenCV backends, and whether Windows shared camera access is available on her machine (see Camera sharing and calls).
    - Go if her hand is found during most real motions and there is a workable answer for calls. No-go means fixing framing or camera angle first, or rethinking the approach.
 2. **Packaged Windows baseline.** Stage 1 detector (head zone), episode logic, chime, tray, pause, built by CI and installed on her laptop. Model-file loading and notifications are checked in the frozen build here.
 3. **Ordinary-work trial.** She runs the baseline during normal work for several days, marking false alerts from the tray. Measured against the acceptance criteria.
@@ -27,7 +27,7 @@ Each milestone ends with a go / no-go decision. Platform problems are found on W
 
 ## Key decisions
 
-Halo is a native Python tray app, developed on macOS and shipped to Windows as a PyInstaller build.
+Hands Down is a native Python tray app, developed on macOS and shipped to Windows as a PyInstaller build.
 
 | Decision | Choice | Why | Rejected |
 | --- | --- | --- | --- |
@@ -76,12 +76,12 @@ An alert fires when a hand touches hair anywhere it hangs, from the scalp to lon
 - **Reset:** pause, camera loss, resume and a switch between stage 1 and stage 2 all clear episode state and return to Idle. An episode cut short this way is logged as interrupted.
 - **Log entry:** start time, duration, whether it alerted, and how it ended (released, interrupted).
 
-**Hair mask (milestone 4).** A hand on hair hides the hair it touches, so the current frame's segmentation labels those pixels as hand or skin, not hair. Halo therefore keeps a rolling hair mask from recent clean frames and tests the hand against that, dilated by a contact margin. The rolling mask follows these rules:
+**Hair mask (milestone 4).** A hand on hair hides the hair it touches, so the current frame's segmentation labels those pixels as hand or skin, not hair. Hands Down therefore keeps a rolling hair mask from recent clean frames and tests the hand against that, dilated by a contact margin. The rolling mask follows these rules:
 
 - **Clean frames only.** A frame refreshes the mask only if the hand tracker reports no hand anywhere in the frame, the face is found with high confidence, and the previous several frames (starting point 1 s) were also clean. "No hand detected" alone is not enough, since a missed or hidden hand is exactly the hard case.
 - **Anchored to the face.** The mask is stored relative to face landmarks and moved with them, so small head movements carry the mask along.
 - **Invalidation.** The mask is thrown away when the head moves or turns more than a threshold since it was captured, or when it is older than a maximum age (starting point 30 s).
-- **No valid mask means stage 1.** At startup, after invalidation, or if a hand is already in her hair when Halo starts, detection uses the stage 1 head zone with a longer dwell time until a clean mask exists.
+- **No valid mask means stage 1.** At startup, after invalidation, or if a hand is already in her hair when Hands Down starts, detection uses the stage 1 head zone with a longer dwell time until a clean mask exists.
 - **Unreliable masks.** If the mask is too small, flickers between refreshes, or hair is close to the background colour, fall back to stage 1 in the same way.
 
 Segmentation runs only on clean frames (to refresh the mask, at a low rate) and when a hand overlaps the check region (to read face skin), so it never runs on every frame.
@@ -90,16 +90,16 @@ Segmentation runs only on clean frames (to refresh the mask, at a low rate) and 
 
 ## Camera sharing and calls
 
-Whether Halo and a meeting app can use the camera at the same time on her laptop is unknown, and milestone 1 settles it before any auto-pause logic is built.
+Whether Hands Down and a meeting app can use the camera at the same time on her laptop is unknown, and milestone 1 settles it before any auto-pause logic is built.
 
 - **What is known:** Windows supports shared, read-only camera access through the WinRT `MediaCapture` API, and Windows 11 adds a multi-app camera setting. OpenCV's DirectShow and Media Foundation backends do not use shared mode, so with OpenCV the first app to open the camera may lock out the second. macOS lets apps share the camera, so none of this shows up during development.
-- **What milestone 1 tests:** both launch orders (Halo then Teams, Teams then Halo) with OpenCV on her laptop and webcam, and whether shared capture through WinRT works on her machine.
+- **What milestone 1 tests:** both launch orders (Hands Down then Teams, Teams then Hands Down) with OpenCV on her laptop and webcam, and whether shared capture through WinRT works on her machine.
 - **Outcomes:**
-  - If Teams and Halo coexist with OpenCV, no special handling is needed beyond camera-busy retries.
+  - If Teams and Hands Down coexist with OpenCV, no special handling is needed beyond camera-busy retries.
   - If they coexist only with shared capture, the Windows camera module in the platform layer switches from OpenCV to WinRT `MediaCapture` (via the `winrt` Python packages). The detection core is unaffected.
-  - If they cannot coexist, Halo must release the camera before a call, using the measures below.
+  - If they cannot coexist, Hands Down must release the camera before a call, using the measures below.
 - **Release measures (if needed):** "Pause for call" is the first item in the tray menu, and a global hotkey pauses and resumes. Automatic meeting detection is added only once a reliable signal is found. A running Teams or Zoom process does not mean a call is in progress, and the Windows camera-usage registry entries (`CapabilityAccessManager\ConsentStore\webcam`) only record an app that already has the camera, not one that failed to get it.
-- **Camera busy:** if another app already holds the camera, Halo shows "camera busy", retries quietly in the background, and never blocks the call.
+- **Camera busy:** if another app already holds the camera, Hands Down shows "camera busy", retries quietly in the background, and never blocks the call.
 
 ## Alerts and app shell
 
@@ -133,8 +133,8 @@ No video leaves the laptop, and in normal use none touches disk; detection quali
 - All processing is local; no network calls at runtime.
 - In normal use, frames are held in memory only and discarded after analysis. The log stores episodes, never images.
 - Recording test clips is a separate developer mode, started on purpose; clips stay on the machine they were recorded on.
-- The ordinary-work trial records no video. Halo logs only its own outputs: alerts, tracking state, her "that wasn't me" marks, and landmark summaries.
-- The webcam light will be on while Halo watches; pausing releases the camera.
+- The ordinary-work trial records no video. Hands Down logs only its own outputs: alerts, tracking state, her "that wasn't me" marks, and landmark summaries.
+- The webcam light will be on while Hands Down watches; pausing releases the camera.
 
 **Acceptance criteria**
 
@@ -147,7 +147,7 @@ Measured in milestone 3, and again for stage 2 if milestone 4 goes ahead. Starti
 | Alert latency (contact begins → alert) | True-positive clips | Under 1.5 s on average |
 | Time not tracking | Ordinary-work trial | Under 10% of watched time |
 
-False alerts per hour is the metric that decides whether she keeps Halo running, so it takes priority when targets conflict.
+False alerts per hour is the metric that decides whether she keeps Hands Down running, so it takes priority when targets conflict.
 
 **Testing**
 
@@ -163,6 +163,6 @@ False alerts per hour is the metric that decides whether she keeps Halo running,
 ## Open questions for the reviewer
 
 - [ ] Do the starting acceptance targets match what she would tolerate day to day, or should they be set with her before milestone 3?
-- [ ] If milestone 1 shows that Halo and Teams cannot share the camera, is a manual "pause for call" acceptable for v1, or is automatic meeting detection a must-have?
+- [ ] If milestone 1 shows that Hands Down and Teams cannot share the camera, is a manual "pause for call" acceptable for v1, or is automatic meeting detection a must-have?
 - [ ] Are the starting timings (0.5 s dwell, 1 s grace, 3 s release) reasonable, given how her episodes actually unfold?
 - [ ] Is the "that wasn't me" tray mark enough to measure false alerts, or does she also need a way to flag missed episodes?

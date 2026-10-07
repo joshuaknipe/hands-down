@@ -1,7 +1,7 @@
 # Model files
 
 Downloaded 2026-10-07 from Google's MediaPipe model storage (float16, "latest").
-They are committed so builds are reproducible and Halo makes no network calls.
+They are committed so builds are reproducible and Hands Down makes no network calls.
 
 | File | Source |
 | --- | --- |

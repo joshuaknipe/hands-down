@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** A command-line tool, run from source on her Windows 11 laptop, that answers milestone 1's two go / no-go questions: does MediaPipe find her hand during real motions at her camera angle, and can Halo and the Teams desktop app use the camera at the same time?
+**Goal:** A command-line tool, run from source on her Windows 11 laptop, that answers milestone 1's two go / no-go questions: does MediaPipe find her hand during real motions at her camera angle, and can Hands Down and the Teams desktop app use the camera at the same time?
 
-**Architecture:** Two packages. `halo/` holds code that later milestones keep: resource paths, camera opening and frame-flow monitoring, and the MediaPipe tracker. `feasibility/` holds milestone-1-only tools behind `python -m feasibility <command>`: `probe` (camera backends), `coexist` (guided Teams test in both launch orders), `record` (labelled clips with live tracking) and `analyse` (hand-visibility stats and verdict). Anything that touches hardware is a thin wrapper around logic that is unit-tested with fakes.
+**Architecture:** Two packages. `handsdown/` holds code that later milestones keep: resource paths, camera opening and frame-flow monitoring, and the MediaPipe tracker. `feasibility/` holds milestone-1-only tools behind `python -m feasibility <command>`: `probe` (camera backends), `coexist` (guided Teams test in both launch orders), `record` (labelled clips with live tracking) and `analyse` (hand-visibility stats and verdict). Anything that touches hardware is a thin wrapper around logic that is unit-tested with fakes.
 
 **Tech Stack:** Python 3.12, MediaPipe 1.1.0 (Tasks API, VIDEO mode), OpenCV 5 (`opencv-contrib-python`, pulled in by MediaPipe), pywinrt 3.2.1 (Windows only, shared camera probe), pytest 9, GitHub Actions (windows-latest).
 
@@ -16,10 +16,10 @@
 - `mediapipe==1.1.0`. It depends on `opencv-contrib-python`; never install `opencv-python` as well, because both provide the `cv2` module and conflict.
 - Use only the MediaPipe Tasks API (`mediapipe.tasks.python.vision`). `mp.solutions` does not exist in MediaPipe 1.x.
 - MediaPipe VIDEO mode raises `ValueError: Input timestamp must be monotonically increasing` on any repeated or backwards timestamp; every call goes through `TimestampGuard`.
-- No network calls at runtime. Model files are committed under `models/` and loaded through `halo.paths.model_path`.
+- No network calls at runtime. Model files are committed under `models/` and loaded through `handsdown.paths.model_path`.
 - Video files and reports are never committed. `.gitignore` covers `clips/`, `reports/` and video extensions.
 - Nothing user-visible names the habit. Clip labels describe where the hand is (`hair_scalp`), not the behaviour.
-- `halo/` never imports from `feasibility/`.
+- `handsdown/` never imports from `feasibility/`.
 - pathlib everywhere; no hard-coded path separators.
 - All timings in seconds or milliseconds of wall-clock time, never frame counts.
 
@@ -45,7 +45,7 @@ models/
   face_landmarker.task       MediaPipe face model (committed)
   SHA256SUMS                 expected hashes
   SOURCES.md                 where the models came from
-halo/
+handsdown/
   __init__.py
   paths.py                   resource_path / model_path, works from source and frozen builds
   camera.py                  backends per OS, open_camera, frame classification, FrameMonitor, reader thread
@@ -84,17 +84,17 @@ docs/milestone-1-runbook.md  step-by-step guide for running milestone 1 on her l
 **Files:**
 - Create: `requirements.txt`, `requirements-dev.txt`, `pyproject.toml`, `.gitattributes`
 - Create: `models/hand_landmarker.task`, `models/face_landmarker.task`, `models/SHA256SUMS`, `models/SOURCES.md`
-- Create: `halo/__init__.py`, `halo/paths.py`
+- Create: `handsdown/__init__.py`, `handsdown/paths.py`
 - Create: `tests/__init__.py`, `tests/helpers.py`, `tests/test_paths.py`
 - Modify: `.gitignore` (add `reports/`)
 
 **Interfaces:**
 - Consumes: nothing.
 - Produces:
-  - `halo.paths.PROJECT_ROOT: Path`
-  - `halo.paths.resource_path(relative: str) -> Path`
-  - `halo.paths.model_path(name: str) -> Path` (raises `FileNotFoundError` naming the path)
-  - `halo.paths.clips_dir() -> Path`, `halo.paths.reports_dir() -> Path`
+  - `handsdown.paths.PROJECT_ROOT: Path`
+  - `handsdown.paths.resource_path(relative: str) -> Path`
+  - `handsdown.paths.model_path(name: str) -> Path` (raises `FileNotFoundError` naming the path)
+  - `handsdown.paths.clips_dir() -> Path`, `handsdown.paths.reports_dir() -> Path`
   - `tests.helpers.FakeClock` (callable; set `.now` to move time)
 
 - [ ] **Step 1: Add dependency and config files**
@@ -175,7 +175,7 @@ Expected: both lines end in `OK`. If a hash differs, Google has replaced the "la
 # Model files
 
 Downloaded 2026-10-07 from Google's MediaPipe model storage (float16, "latest").
-They are committed so builds are reproducible and Halo makes no network calls.
+They are committed so builds are reproducible and Hands Down makes no network calls.
 
 | File | Source |
 | --- | --- |
@@ -213,7 +213,7 @@ import sys
 
 import pytest
 
-from halo import paths
+from handsdown import paths
 
 
 def test_resource_path_from_source_is_under_project_root():
@@ -250,13 +250,13 @@ def test_data_folders_are_under_project_root():
 - [ ] **Step 5: Run the tests to verify they fail**
 
 Run: `.venv/bin/python -m pytest tests/test_paths.py -v`
-Expected: FAIL with `ModuleNotFoundError: No module named 'halo'`
+Expected: FAIL with `ModuleNotFoundError: No module named 'handsdown'`
 
-- [ ] **Step 6: Implement `halo/paths.py`**
+- [ ] **Step 6: Implement `handsdown/paths.py`**
 
-`halo/__init__.py`: empty file.
+`handsdown/__init__.py`: empty file.
 
-`halo/paths.py`:
+`handsdown/paths.py`:
 
 ```python
 """Locate bundled resources and developer data folders, from source or from a frozen build."""
@@ -301,7 +301,7 @@ Expected: 5 passed
 - [ ] **Step 8: Commit**
 
 ```bash
-git add requirements.txt requirements-dev.txt pyproject.toml .gitattributes .gitignore models halo tests
+git add requirements.txt requirements-dev.txt pyproject.toml .gitattributes .gitignore models handsdown tests
 git commit -m "Add project scaffold, MediaPipe models and resource paths"
 ```
 
@@ -310,7 +310,7 @@ git commit -m "Add project scaffold, MediaPipe models and resource paths"
 ### Task 2: Camera opening, frame-flow monitoring and the probe command
 
 **Files:**
-- Create: `halo/camera.py`
+- Create: `handsdown/camera.py`
 - Create: `feasibility/__init__.py`, `feasibility/__main__.py`, `feasibility/probe.py`
 - Modify: `tests/helpers.py` (add `FakeCapture`)
 - Test: `tests/test_camera.py`
@@ -318,17 +318,17 @@ git commit -m "Add project scaffold, MediaPipe models and resource paths"
 **Interfaces:**
 - Consumes: nothing from earlier tasks.
 - Produces:
-  - `halo.camera.Backend(name: str, api: int)` and constants `DSHOW`, `MSMF`, `AVFOUNDATION`, `ANY`
-  - `halo.camera.backends_for_platform(platform: str = sys.platform) -> list[Backend]`
-  - `halo.camera.backend_by_name(name: str) -> Backend` (raises `ValueError`)
-  - `halo.camera.is_black(frame) -> bool`, `halo.camera.classify(ok: bool, frame) -> str` returning `"good" | "black" | "failed"`
-  - `halo.camera.OpenResult(backend: str, ok: bool, seconds: float, capture: Any = None, error: str = "")`
-  - `halo.camera.open_camera(index, backend, width=640, height=480, capture_factory=cv2.VideoCapture, clock=time.monotonic) -> OpenResult` (`capture` is the raw `cv2.VideoCapture`)
-  - `halo.camera.OpenCvSource(capture)` with `read_status() -> str` and `close()`
-  - `halo.camera.FlowStats(good: int, black: int, failed: int, max_gap_s: float)` (frozen dataclass)
-  - `halo.camera.FrameMonitor(clock=time.monotonic)` with `record(status: str)` and `snapshot() -> FlowStats`
-  - `halo.camera.start_reader(source, monitor, stop: threading.Event) -> threading.Thread`
-  - `halo.camera.stop_reader(thread, stop, source, timeout: float = 3.0) -> bool`
+  - `handsdown.camera.Backend(name: str, api: int)` and constants `DSHOW`, `MSMF`, `AVFOUNDATION`, `ANY`
+  - `handsdown.camera.backends_for_platform(platform: str = sys.platform) -> list[Backend]`
+  - `handsdown.camera.backend_by_name(name: str) -> Backend` (raises `ValueError`)
+  - `handsdown.camera.is_black(frame) -> bool`, `handsdown.camera.classify(ok: bool, frame) -> str` returning `"good" | "black" | "failed"`
+  - `handsdown.camera.OpenResult(backend: str, ok: bool, seconds: float, capture: Any = None, error: str = "")`
+  - `handsdown.camera.open_camera(index, backend, width=640, height=480, capture_factory=cv2.VideoCapture, clock=time.monotonic) -> OpenResult` (`capture` is the raw `cv2.VideoCapture`)
+  - `handsdown.camera.OpenCvSource(capture)` with `read_status() -> str` and `close()`
+  - `handsdown.camera.FlowStats(good: int, black: int, failed: int, max_gap_s: float)` (frozen dataclass)
+  - `handsdown.camera.FrameMonitor(clock=time.monotonic)` with `record(status: str)` and `snapshot() -> FlowStats`
+  - `handsdown.camera.start_reader(source, monitor, stop: threading.Event) -> threading.Thread`
+  - `handsdown.camera.stop_reader(thread, stop, source, timeout: float = 3.0) -> bool`
   - A frame source is any object with `read_status() -> str | None` (`None` means no new frame yet) and `close()`.
   - CLI: `python -m feasibility probe [--camera N] [--seconds S]`
 
@@ -372,8 +372,8 @@ import threading
 import numpy as np
 import pytest
 
-from halo import camera
-from halo.camera import FlowStats, FrameMonitor
+from handsdown import camera
+from handsdown.camera import FlowStats, FrameMonitor
 from tests.helpers import FakeCapture, FakeClock
 
 BLACK = np.zeros((480, 640, 3), np.uint8)
@@ -523,9 +523,9 @@ def test_opencv_source_classifies_reads():
 - [ ] **Step 3: Run the tests to verify they fail**
 
 Run: `.venv/bin/python -m pytest tests/test_camera.py -v`
-Expected: FAIL with `ImportError: cannot import name 'camera' from 'halo'`
+Expected: FAIL with `ImportError: cannot import name 'camera' from 'handsdown'`
 
-- [ ] **Step 4: Implement `halo/camera.py`**
+- [ ] **Step 4: Implement `handsdown/camera.py`**
 
 ```python
 """Open the webcam with an explicit OpenCV backend per OS, and tell real frames from empty ones."""
@@ -729,7 +729,7 @@ import time
 
 import cv2
 
-from halo.camera import Backend, FlowStats, FrameMonitor, OpenCvSource, open_camera, start_reader, stop_reader
+from handsdown.camera import Backend, FlowStats, FrameMonitor, OpenCvSource, open_camera, start_reader, stop_reader
 
 
 def probe_line(name: str, open_seconds: float, size: str, flow: FlowStats, seconds: float) -> str:
@@ -782,11 +782,11 @@ import sys
 
 os.environ.setdefault("GLOG_minloglevel", "2")  # quieten MediaPipe's C++ logging
 
-from halo.camera import backends_for_platform
+from handsdown.camera import backends_for_platform
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="python -m feasibility", description="Halo milestone 1 feasibility tools")
+    parser = argparse.ArgumentParser(prog="python -m feasibility", description="Hands Down milestone 1 feasibility tools")
     sub = parser.add_subparsers(dest="command", required=True)
 
     probe = sub.add_parser("probe", help="Open the camera with each backend and report frame flow")
@@ -817,7 +817,7 @@ Expected: one `avfoundation` line showing it opened, a resolution, and a frame r
 - [ ] **Step 8: Commit**
 
 ```bash
-git add halo/camera.py feasibility tests
+git add handsdown/camera.py feasibility tests
 git commit -m "Add camera opening, frame-flow monitoring and probe command"
 ```
 
@@ -826,15 +826,15 @@ git commit -m "Add camera opening, frame-flow monitoring and probe command"
 ### Task 3: Hand and face tracker
 
 **Files:**
-- Create: `halo/landmarks.py`
+- Create: `handsdown/landmarks.py`
 - Test: `tests/test_landmarks.py`
 
 **Interfaces:**
-- Consumes: `halo.paths.model_path(name) -> Path`
+- Consumes: `handsdown.paths.model_path(name) -> Path`
 - Produces:
-  - `halo.landmarks.Observation(timestamp_ms: int, hands: tuple[tuple[tuple[float, float], ...], ...], face_found: bool)` (frozen) with property `hand_found -> bool`. Each hand is a tuple of normalised `(x, y)` landmarks, 0–1 across the frame.
-  - `halo.landmarks.TimestampGuard()` with `next(timestamp_ms: int) -> int`
-  - `halo.landmarks.Tracker(num_hands: int = 2)`: context manager with `process(frame_bgr: np.ndarray, timestamp_ms: int) -> Observation` and `close()`
+  - `handsdown.landmarks.Observation(timestamp_ms: int, hands: tuple[tuple[tuple[float, float], ...], ...], face_found: bool)` (frozen) with property `hand_found -> bool`. Each hand is a tuple of normalised `(x, y)` landmarks, 0–1 across the frame.
+  - `handsdown.landmarks.TimestampGuard()` with `next(timestamp_ms: int) -> int`
+  - `handsdown.landmarks.Tracker(num_hands: int = 2)`: context manager with `process(frame_bgr: np.ndarray, timestamp_ms: int) -> Observation` and `close()`
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -843,7 +843,7 @@ git commit -m "Add camera opening, frame-flow monitoring and probe command"
 ```python
 import numpy as np
 
-from halo.landmarks import Observation, TimestampGuard, Tracker
+from handsdown.landmarks import Observation, TimestampGuard, Tracker
 
 
 def test_guard_passes_increasing_timestamps():
@@ -879,9 +879,9 @@ def test_tracker_accepts_repeated_timestamps():
 - [ ] **Step 2: Run the tests to verify they fail**
 
 Run: `.venv/bin/python -m pytest tests/test_landmarks.py -v`
-Expected: FAIL with `ModuleNotFoundError: No module named 'halo.landmarks'`
+Expected: FAIL with `ModuleNotFoundError: No module named 'handsdown.landmarks'`
 
-- [ ] **Step 3: Implement `halo/landmarks.py`**
+- [ ] **Step 3: Implement `handsdown/landmarks.py`**
 
 ```python
 """Run MediaPipe's hand and face landmarkers on video frames."""
@@ -894,7 +894,7 @@ import numpy as np
 from mediapipe.tasks.python import vision
 from mediapipe.tasks.python.core.base_options import BaseOptions
 
-from halo.paths import model_path
+from handsdown.paths import model_path
 
 Point = tuple[float, float]
 
@@ -972,7 +972,7 @@ Expected: 5 passed (MediaPipe prints some INFO and W lines; ignore them)
 - [ ] **Step 5: Commit**
 
 ```bash
-git add halo/landmarks.py tests/test_landmarks.py
+git add handsdown/landmarks.py tests/test_landmarks.py
 git commit -m "Add hand and face tracker with timestamp guard"
 ```
 
@@ -1203,10 +1203,10 @@ git commit -m "Add clip labels, metadata and storage"
 
 **Interfaces:**
 - Consumes:
-  - `halo.camera.open_camera`, `halo.camera.Backend`, `halo.camera.backend_by_name`, `halo.camera.backends_for_platform`
-  - `halo.landmarks.Tracker`, `halo.landmarks.Observation`
+  - `handsdown.camera.open_camera`, `handsdown.camera.Backend`, `handsdown.camera.backend_by_name`, `handsdown.camera.backends_for_platform`
+  - `handsdown.landmarks.Tracker`, `handsdown.landmarks.Observation`
   - `feasibility.clips.LABELS`, `ClipMeta`, `Clip`, `assign_split`, `new_clip_paths`, `count_clips`, `save_meta`
-  - `halo.paths.clips_dir`
+  - `handsdown.paths.clips_dir`
 - Produces:
   - `feasibility.record.MIN_CLIP_FRAMES = 15`
   - `feasibility.record.ClipRecorder(clips_dir, label, backend, size, writer_factory=open_writer, clock=time.monotonic, now=datetime.now)` with property `recording -> bool`, attribute `saved: int`, and methods `start()`, `add(frame)`, `stop() -> Clip | None`
@@ -1226,7 +1226,7 @@ import pytest
 
 from feasibility.clips import load_clips
 from feasibility.record import MIN_CLIP_FRAMES, ClipRecorder, draw_overlay
-from halo.landmarks import Observation
+from handsdown.landmarks import Observation
 from tests.helpers import FakeClock
 
 SIZE = (64, 48)
@@ -1352,14 +1352,14 @@ import cv2
 import numpy as np
 
 from feasibility.clips import LABELS, Clip, ClipMeta, assign_split, count_clips, new_clip_paths, save_meta
-from halo.camera import Backend, open_camera
-from halo.landmarks import Observation, Tracker
+from handsdown.camera import Backend, open_camera
+from handsdown.landmarks import Observation, Tracker
 
 MIN_CLIP_FRAMES = 15  # shorter recordings are accidental key presses and are discarded
 NOMINAL_FPS = 30.0  # written into the file header only; real frame times are kept in the metadata
 PREVIEW_TRACK_EVERY = 3  # track every 3rd frame so the preview keeps up on a laptop CPU
 MAX_FAILED_READS = 50
-WINDOW = "Halo - clip recorder"
+WINDOW = "Hands Down - clip recorder"
 FONT = cv2.FONT_HERSHEY_SIMPLEX
 
 
@@ -1508,10 +1508,10 @@ Expected: all passed
 
 - [ ] **Step 5: Add the `record` command to `feasibility/__main__.py`**
 
-Add this import below `from halo.camera import backends_for_platform`, changing that line to:
+Add this import below `from handsdown.camera import backends_for_platform`, changing that line to:
 
 ```python
-from halo.camera import backend_by_name, backends_for_platform
+from handsdown.camera import backend_by_name, backends_for_platform
 ```
 
 Add this block after the `probe` subparser arguments, before `args = parser.parse_args(argv)`:
@@ -1529,7 +1529,7 @@ Add this block before `return 2`:
     if args.command == "record":
         from feasibility.clips import LABELS
         from feasibility.record import run_record
-        from halo.paths import clips_dir
+        from handsdown.paths import clips_dir
 
         if args.label not in LABELS:
             parser.error(f"--label must be one of: {', '.join(LABELS)}")
@@ -1558,7 +1558,7 @@ git commit -m "Add clip recorder with live tracking preview"
 - Test: `tests/test_stats.py`
 
 **Interfaces:**
-- Consumes: `halo.landmarks.Observation`; `feasibility.clips.TRUE_POSITIVE_LABELS`
+- Consumes: `handsdown.landmarks.Observation`; `feasibility.clips.TRUE_POSITIVE_LABELS`
 - Produces:
   - Constants `MIN_CLIP_HAND_RATE = 0.8`, `MIN_PASSING_SHARE = 0.8`, `MIN_CLIPS_PER_LABEL = 3`, `WEAK_LABEL_PASS_SHARE = 0.5`
   - `ClipStats(label, split, video: str, frames: int, duration_s: float, hand_rate: float, face_rate: float, longest_hand_gap_s: float, frame_count_mismatch: int)` (frozen) with property `passed -> bool`
@@ -1578,7 +1578,7 @@ import pytest
 
 from feasibility.clips import TRUE_POSITIVE_LABELS
 from feasibility.stats import ClipStats, clip_stats, evaluate, longest_gap_s
-from halo.landmarks import Observation
+from handsdown.landmarks import Observation
 
 
 def obs(ts, hand, face=True):
@@ -1681,7 +1681,7 @@ from dataclasses import dataclass, field
 from typing import Sequence
 
 from feasibility.clips import TRUE_POSITIVE_LABELS
-from halo.landmarks import Observation
+from handsdown.landmarks import Observation
 
 MIN_CLIP_HAND_RATE = 0.8  # a clip passes when a hand is found in at least this share of frames
 MIN_PASSING_SHARE = 0.8  # GO needs at least this share of true-positive clips to pass
@@ -1800,8 +1800,8 @@ git commit -m "Add clip statistics and go/no-go verdict"
 - Consumes:
   - `feasibility.clips.Clip`, `ClipMeta`, `load_clips`, `TRUE_POSITIVE_LABELS`, `LABELS`
   - `feasibility.stats.ClipStats`, `clip_stats`, `evaluate`, `MIN_CLIP_HAND_RATE`
-  - `halo.landmarks.Tracker`, `Observation`
-  - `halo.paths.clips_dir`, `halo.paths.reports_dir`
+  - `handsdown.landmarks.Tracker`, `Observation`
+  - `handsdown.paths.clips_dir`, `handsdown.paths.reports_dir`
 - Produces:
   - `feasibility.report.write_report(reports_dir: Path, kind: str, payload: dict, now: datetime) -> Path`
   - `feasibility.analyse.read_frames(video: Path) -> Iterator[np.ndarray]`
@@ -1826,7 +1826,7 @@ from feasibility.analyse import analyse_clip, format_table, read_frames, run_ana
 from feasibility.clips import Clip, ClipMeta, save_meta
 from feasibility.report import write_report
 from feasibility.stats import ClipStats
-from halo.landmarks import Observation
+from handsdown.landmarks import Observation
 
 
 class FakeTracker:
@@ -1952,7 +1952,7 @@ import numpy as np
 from feasibility.clips import LABELS, TRUE_POSITIVE_LABELS, Clip, load_clips
 from feasibility.report import write_report
 from feasibility.stats import MIN_CLIP_HAND_RATE, ClipStats, clip_stats, evaluate
-from halo.landmarks import Tracker
+from handsdown.landmarks import Tracker
 
 
 def read_frames(video: Path) -> Iterator[np.ndarray]:
@@ -2033,7 +2033,7 @@ Add before `return 2`:
 ```python
     if args.command == "analyse":
         from feasibility.analyse import run_analyse
-        from halo.paths import clips_dir, reports_dir
+        from handsdown.paths import clips_dir, reports_dir
 
         return run_analyse(clips_dir(), reports_dir())
 ```
@@ -2062,11 +2062,11 @@ git commit -m "Add clip analysis with hand-visibility verdict"
 
 **Interfaces:**
 - Consumes:
-  - `halo.camera.OpenResult`, `FlowStats`, `FrameMonitor`, `OpenCvSource`, `open_camera`, `backend_by_name`, `backends_for_platform`, `start_reader`, `stop_reader`
-  - `feasibility.report.write_report`; `halo.paths.reports_dir`
+  - `handsdown.camera.OpenResult`, `FlowStats`, `FrameMonitor`, `OpenCvSource`, `open_camera`, `backend_by_name`, `backends_for_platform`, `start_reader`, `stop_reader`
+  - `feasibility.report.write_report`; `handsdown.paths.reports_dir`
 - Produces:
-  - Constants `ORDERS = ("halo_first", "teams_first")`, `OBSERVE_SECONDS = 15.0`, `MIN_GOOD_FRAMES = 30`, `MAX_GAP_S = 3.0`, `WINRT_SHARED = "winrt_shared"`
-  - `TrialResult(backend, order, halo_opened, open_seconds, open_error, halo_flow: FlowStats | None, teams_video_ok: bool | None)` with properties `halo_kept_frames`, `coexisted` and method `to_dict() -> dict`
+  - Constants `ORDERS = ("app_first", "teams_first")`, `OBSERVE_SECONDS = 15.0`, `MIN_GOOD_FRAMES = 30`, `MAX_GAP_S = 3.0`, `WINRT_SHARED = "winrt_shared"`
+  - `TrialResult(backend, order, app_opened, open_seconds, open_error, app_flow: FlowStats | None, teams_video_ok: bool | None)` with properties `app_kept_frames`, `coexisted` and method `to_dict() -> dict`
   - `ask_yes_no(ask, question) -> bool`
   - `run_trial(backend, order, opener, ask, say, observe_seconds=OBSERVE_SECONDS, sleep=time.sleep, monitor_factory=FrameMonitor) -> TrialResult`
   - `conclusion(trials) -> str`, `summary_lines(trials) -> list[str]`
@@ -2075,7 +2075,7 @@ git commit -m "Add clip analysis with hand-visibility verdict"
   - `default_backends() -> list[str]`
   - CLI: `python -m feasibility coexist [--camera N] [--backends a,b] [--observe S]`
 
-**How a trial works.** "Halo first": Halo opens the camera and starts reading on a background thread; she starts a Teams meeting with her camera on; both run for `observe_seconds`; she says whether her own video shows in Teams. "Teams first": she starts the meeting first, then Halo tries to open the camera. A trial counts as coexisting only if Halo opened, Halo kept getting frames (at least `MIN_GOOD_FRAMES` good frames and no gap over `MAX_GAP_S`), and her Teams video showed. The conclusion maps onto the three outcomes in the spec's "Camera sharing and calls" section.
+**How a trial works.** "Hands Down first": Hands Down opens the camera and starts reading on a background thread; she starts a Teams meeting with her camera on; both run for `observe_seconds`; she says whether her own video shows in Teams. "Teams first": she starts the meeting first, then Hands Down tries to open the camera. A trial counts as coexisting only if Hands Down opened, Hands Down kept getting frames (at least `MIN_GOOD_FRAMES` good frames and no gap over `MAX_GAP_S`), and her Teams video showed. The conclusion maps onto the three outcomes in the spec's "Camera sharing and calls" section.
 
 - [ ] **Step 1: Add `ScriptedAsk` to `tests/helpers.py`**
 
@@ -2107,7 +2107,7 @@ import pytest
 
 from feasibility import coexist
 from feasibility.coexist import TrialResult, ask_yes_no, conclusion, run_session, run_trial
-from halo.camera import FlowStats, OpenResult
+from handsdown.camera import FlowStats, OpenResult
 from tests.helpers import ScriptedAsk
 
 SMOOTH = FlowStats(good=400, black=0, failed=0, max_gap_s=0.1)
@@ -2158,11 +2158,11 @@ def trial(backend, order, answers, ok_backends=("dshow",), flow=SMOOTH):
     return result, ask, sources
 
 
-def test_halo_first_success_coexists_and_closes_the_camera():
-    result, ask, sources = trial("dshow", "halo_first", ["", "", "y", ""])
-    assert result.coexisted and result.halo_kept_frames and result.teams_video_ok
+def test_app_first_success_coexists_and_closes_the_camera():
+    result, ask, sources = trial("dshow", "app_first", ["", "", "y", ""])
+    assert result.coexisted and result.app_kept_frames and result.teams_video_ok
     assert "not using the camera" in ask.prompts[0]
-    assert "Halo is now using the camera" in ask.prompts[1]
+    assert "Hands Down is now using the camera" in ask.prompts[1]
     assert sources["dshow"].closed
 
 
@@ -2172,29 +2172,29 @@ def test_teams_first_success_coexists():
     assert "Meet now" in ask.prompts[0]
 
 
-def test_teams_first_when_halo_cannot_open():
+def test_teams_first_when_app_cannot_open():
     result, _, _ = trial("msmf", "teams_first", ["", "y", ""])
-    assert not result.halo_opened and result.teams_video_ok is True and not result.coexisted
-    assert result.open_error == "camera did not open" and result.halo_flow is None
+    assert not result.app_opened and result.teams_video_ok is True and not result.coexisted
+    assert result.open_error == "camera did not open" and result.app_flow is None
 
 
-def test_halo_first_when_halo_cannot_open_stops_early():
-    result, ask, _ = trial("msmf", "halo_first", [""])
-    assert not result.halo_opened and result.teams_video_ok is None
+def test_app_first_when_app_cannot_open_stops_early():
+    result, ask, _ = trial("msmf", "app_first", [""])
+    assert not result.app_opened and result.teams_video_ok is None
 
 
 def test_teams_video_missing_is_not_coexisting():
-    result, _, _ = trial("dshow", "halo_first", ["", "", "n", ""])
-    assert result.halo_kept_frames and not result.coexisted
+    result, _, _ = trial("dshow", "app_first", ["", "", "n", ""])
+    assert result.app_kept_frames and not result.coexisted
 
 
-def test_halo_frames_stalling_is_not_coexisting():
-    result, _, _ = trial("dshow", "halo_first", ["", "", "y", ""], flow=STALLED)
-    assert not result.halo_kept_frames and not result.coexisted
+def test_app_frames_stalling_is_not_coexisting():
+    result, _, _ = trial("dshow", "app_first", ["", "", "y", ""], flow=STALLED)
+    assert not result.app_kept_frames and not result.coexisted
 
 
 def test_too_few_good_frames_is_not_coexisting():
-    result, _, _ = trial("dshow", "halo_first", ["", "", "y", ""], flow=FlowStats(good=5, max_gap_s=0.1))
+    result, _, _ = trial("dshow", "app_first", ["", "", "y", ""], flow=FlowStats(good=5, max_gap_s=0.1))
     assert not result.coexisted
 
 
@@ -2209,12 +2209,12 @@ def result_for(backend, order, ok):
 
 
 def test_conclusion_prefers_opencv_when_it_coexists_both_ways():
-    trials = [result_for("dshow", o, True) for o in coexist.ORDERS] + [result_for("msmf", "halo_first", False)]
+    trials = [result_for("dshow", o, True) for o in coexist.ORDERS] + [result_for("msmf", "app_first", False)]
     assert "no special handling" in conclusion(trials) and "dshow" in conclusion(trials)
 
 
 def test_conclusion_one_order_is_not_enough():
-    trials = [result_for("dshow", "halo_first", True), result_for("dshow", "teams_first", False)]
+    trials = [result_for("dshow", "app_first", True), result_for("dshow", "teams_first", False)]
     assert "release the camera" in conclusion(trials)
 
 
@@ -2225,17 +2225,17 @@ def test_conclusion_when_only_shared_capture_works():
 
 
 def test_trial_result_dict_includes_derived_fields():
-    data = result_for("dshow", "halo_first", True).to_dict()
-    assert data["coexisted"] is True and data["halo_kept_frames"] is True
-    assert data["halo_flow"]["good"] == 400
+    data = result_for("dshow", "app_first", True).to_dict()
+    assert data["coexisted"] is True and data["app_kept_frames"] is True
+    assert data["app_flow"]["good"] == 400
 
 
 def test_session_runs_every_backend_in_both_orders():
     opener, _ = opener_for(("dshow",))
     answers = ["off"]
-    answers += ["", "", "y", ""]  # dshow, Halo first
+    answers += ["", "", "y", ""]  # dshow, Hands Down first
     answers += ["", "y", ""]  # dshow, Teams first
-    answers += [""]  # msmf, Halo first: cannot open
+    answers += [""]  # msmf, Hands Down first: cannot open
     answers += ["", "y", ""]  # msmf, Teams first: cannot open
     ask = ScriptedAsk(answers)
     report = run_session(["dshow", "msmf"], opener, ask, say=lambda s: None, observe_seconds=0,
@@ -2243,7 +2243,7 @@ def test_session_runs_every_backend_in_both_orders():
     assert ask.answers == []
     assert report["windows_multi_app_setting"] == "off"
     assert [(t["backend"], t["order"]) for t in report["trials"]] == [
-        ("dshow", "halo_first"), ("dshow", "teams_first"), ("msmf", "halo_first"), ("msmf", "teams_first"),
+        ("dshow", "app_first"), ("dshow", "teams_first"), ("msmf", "app_first"), ("msmf", "teams_first"),
     ]
     assert "dshow" in report["conclusion"]
 
@@ -2261,7 +2261,7 @@ Expected: FAIL with `ImportError: cannot import name 'coexist' from 'feasibility
 - [ ] **Step 4: Implement `feasibility/coexist.py`**
 
 ```python
-"""Guided test of whether Halo and the Teams desktop app can use the camera at the same time.
+"""Guided test of whether Hands Down and the Teams desktop app can use the camera at the same time.
 
 Each backend is tried in both launch orders. The person at the laptop starts and leaves
 Teams meetings when prompted and says whether their own video shows in Teams.
@@ -2272,14 +2272,14 @@ import time
 from dataclasses import asdict, dataclass
 from typing import Callable
 
-from halo.camera import (
+from handsdown.camera import (
     FlowStats, FrameMonitor, OpenCvSource, OpenResult,
     backend_by_name, backends_for_platform, open_camera, start_reader, stop_reader,
 )
 
-ORDERS = ("halo_first", "teams_first")
+ORDERS = ("app_first", "teams_first")
 OBSERVE_SECONDS = 15.0  # how long both apps run together before asking about Teams
-MIN_GOOD_FRAMES = 30  # Halo must keep getting real frames...
+MIN_GOOD_FRAMES = 30  # Hands Down must keep getting real frames...
 MAX_GAP_S = 3.0  # ...with no stall longer than this
 WINRT_SHARED = "winrt_shared"
 
@@ -2294,23 +2294,23 @@ MULTI_APP_QUESTION = (
 class TrialResult:
     backend: str
     order: str
-    halo_opened: bool
+    app_opened: bool
     open_seconds: float
     open_error: str
-    halo_flow: FlowStats | None
-    teams_video_ok: bool | None  # None when Halo could not start the trial
+    app_flow: FlowStats | None
+    teams_video_ok: bool | None  # None when Hands Down could not start the trial
 
     @property
-    def halo_kept_frames(self) -> bool:
-        flow = self.halo_flow
+    def app_kept_frames(self) -> bool:
+        flow = self.app_flow
         return flow is not None and flow.good >= MIN_GOOD_FRAMES and flow.max_gap_s <= MAX_GAP_S
 
     @property
     def coexisted(self) -> bool:
-        return self.halo_opened and self.halo_kept_frames and self.teams_video_ok is True
+        return self.app_opened and self.app_kept_frames and self.teams_video_ok is True
 
     def to_dict(self) -> dict:
-        return asdict(self) | {"halo_kept_frames": self.halo_kept_frames, "coexisted": self.coexisted}
+        return asdict(self) | {"app_kept_frames": self.app_kept_frames, "coexisted": self.coexisted}
 
 
 def ask_yes_no(ask: Callable[[str], str], question: str) -> bool:
@@ -2333,26 +2333,26 @@ def run_trial(backend: str, order: str, opener: Callable[[str], OpenResult], ask
 
     result = opener(backend)
     if not result.ok:
-        say(f"Halo could not open the camera: {result.error}")
+        say(f"Hands Down could not open the camera: {result.error}")
         teams_ok = None
         if order == "teams_first":
             teams_ok = ask_yes_no(ask, "Is your own video still showing in Teams?")
             ask("Leave the Teams meeting, then press Enter.")
         return TrialResult(backend, order, False, result.seconds, result.error, None, teams_ok)
 
-    say(f"Halo opened the camera in {result.seconds:.1f} s.")
+    say(f"Hands Down opened the camera in {result.seconds:.1f} s.")
     monitor = monitor_factory()
     stop = threading.Event()
     thread = start_reader(result.capture, monitor, stop)
-    if order == "halo_first":
-        ask(f"Halo is now using the camera. {TEAMS_START} "
+    if order == "app_first":
+        ask(f"Hands Down is now using the camera. {TEAMS_START} "
             "Press Enter once Teams has had a few seconds to show your video.")
     say(f"Watching both apps for {observe_seconds:.0f} s...")
     sleep(observe_seconds)
     teams_ok = ask_yes_no(ask, "Is your own video showing in Teams?")
     flow = monitor.snapshot()
     if not stop_reader(thread, stop, result.capture):
-        say("Warning: Halo's camera read is stuck. If the next backend fails to open, restart the tool.")
+        say("Warning: Hands Down's camera read is stuck. If the next backend fails to open, restart the tool.")
     ask("Leave the Teams meeting, then press Enter.")
     return TrialResult(backend, order, True, result.seconds, "", flow, teams_ok)
 
@@ -2374,17 +2374,17 @@ def conclusion(trials: list[TrialResult]) -> str:
         return ("Only Windows shared capture works alongside Teams in both launch orders: "
                 "switch the Windows camera module to WinRT MediaCapture.")
     return ("No backend worked alongside Teams in both launch orders: "
-            "Halo must release the camera for calls (pause for call).")
+            "Hands Down must release the camera for calls (pause for call).")
 
 
 def summary_lines(trials: list[TrialResult]) -> list[str]:
     lines = ["", f"{'backend':<13} {'order':<12} {'result':<6} details"]
     for t in trials:
-        if t.halo_opened:
-            details = (f"Halo frames: {t.halo_flow.good} good, longest gap {t.halo_flow.max_gap_s:.1f} s; "
+        if t.app_opened:
+            details = (f"Hands Down frames: {t.app_flow.good} good, longest gap {t.app_flow.max_gap_s:.1f} s; "
                        f"Teams video: {'yes' if t.teams_video_ok else 'no'}")
         else:
-            details = f"Halo did not open: {t.open_error}"
+            details = f"Hands Down did not open: {t.open_error}"
         lines.append(f"{t.backend:<13} {t.order:<12} {'OK' if t.coexisted else 'FAIL':<6} {details}")
     return lines
 
@@ -2443,7 +2443,7 @@ Add before `return 2`:
 
         from feasibility.coexist import default_backends, make_opener, run_session
         from feasibility.report import write_report
-        from halo.paths import reports_dir
+        from handsdown.paths import reports_dir
 
         backends = args.backends.split(",") if args.backends else default_backends()
         report = run_session(backends, make_opener(args.camera), ask=input, say=print, observe_seconds=args.observe)
@@ -2475,7 +2475,7 @@ git commit -m "Add guided Teams camera coexistence test"
 - Test: `tests/test_winrt_probe.py`
 
 **Interfaces:**
-- Consumes: `halo.camera.OpenResult`; `feasibility.coexist.WINRT_SHARED`
+- Consumes: `handsdown.camera.OpenResult`; `feasibility.coexist.WINRT_SHARED`
 - Produces:
   - `feasibility.winrt_probe.winrt_available() -> bool`
   - `feasibility.winrt_probe.open_shared(clock=time.monotonic) -> OpenResult` (never raises; on success `capture` is a `WinrtSharedSource`)
@@ -2519,7 +2519,7 @@ def test_open_shared_reports_missing_camera_without_raising():
 
 
 def test_opener_routes_shared_backend_to_winrt(monkeypatch):
-    from halo.camera import OpenResult
+    from handsdown.camera import OpenResult
 
     monkeypatch.setattr(winrt_probe, "open_shared", lambda: OpenResult("winrt_shared", False, 0.0, error="stub"))
     result = coexist.make_opener(0)(coexist.WINRT_SHARED)
@@ -2536,7 +2536,7 @@ Expected: FAIL with `ImportError: cannot import name 'winrt_probe' from 'feasibi
 ```python
 """Best-effort probe of Windows shared camera access (MediaCapture in SharedReadOnly mode) via pywinrt.
 
-Shared mode lets Halo read frames while another app, such as Teams, controls the camera.
+Shared mode lets Hands Down read frames while another app, such as Teams, controls the camera.
 Windows-only and untestable on the Mac, so it stays small and never raises: any failure
 becomes the error text of an OpenResult, and the coexist session carries on.
 """
@@ -2545,7 +2545,7 @@ import asyncio
 import sys
 import time
 
-from halo.camera import OpenResult
+from handsdown.camera import OpenResult
 
 BACKEND = "winrt_shared"
 
@@ -2741,7 +2741,7 @@ Allow about an hour: 10 minutes setup, 15 minutes for the Teams test, 30 minutes
 1. Install Python 3.12 from python.org. On the first installer screen, tick **Add python.exe to PATH**.
 2. Get the code. Either install Git for Windows and run `git clone https://github.com/joshuaknipe/hands-down.git`
    (sign in to GitHub when asked; the repo is private), or on the Mac run
-   `git archive --format=zip -o halo.zip HEAD`, copy `halo.zip` over and unzip it.
+   `git archive --format=zip -o hands-down.zip HEAD`, copy `hands-down.zip` over and unzip it.
 3. In a terminal in the project folder:
 
    ```
@@ -2771,15 +2771,15 @@ Have Teams open and signed in, but not in a meeting.
 python -m feasibility coexist
 ```
 
-Follow the prompts. Each backend is tested twice: once with Halo opening the camera first, once
+Follow the prompts. Each backend is tested twice: once with Hands Down opening the camera first, once
 with Teams first. When asked, start a "Meet now" meeting with the camera on, and answer honestly
 whether her own video shows in Teams. Leave each meeting when told to.
 
 The last line is the conclusion. It is one of:
 
 - **OpenCV works alongside Teams** — no special camera handling is needed.
-- **Only Windows shared capture works** — Halo's Windows camera code will use WinRT instead of OpenCV.
-- **No backend worked** — Halo will need "pause for call".
+- **Only Windows shared capture works** — Hands Down's Windows camera code will use WinRT instead of OpenCV.
+- **No backend worked** — Hands Down will need "pause for call".
 
 If a backend gets stuck, press Ctrl+C, then rerun with the remaining backends only, for example
 `python -m feasibility coexist --backends msmf,winrt_shared`.
