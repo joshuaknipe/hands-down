@@ -134,3 +134,30 @@ def test_with_controls_draws_the_button_without_changing_the_frame():
     assert FRAME.max() == 0 and out.max() > 0
     x0, y0, x1, y1 = preview.settings_button(640)
     assert out[y0:y1, x0:x1].max() > 0
+
+
+def test_viewer_exits_cleanly_while_its_reader_waits_on_stdin():
+    """Closing the camera window used to abort the viewer: a daemon thread held stdin's lock at shutdown."""
+    import os
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    script = (
+        "import sys, threading, time\n"
+        "from handsdown import preview\n"
+        "threading.Thread(target=lambda: preview.read_frame(sys.stdin.buffer), daemon=True).start()\n"
+        "time.sleep(0.3)\n"
+        "preview.end_viewer(0)\n"
+    )
+    root = Path(__file__).resolve().parent.parent
+    env = os.environ | {"PYTHONPATH": str(root)}
+    process = subprocess.Popen([sys.executable, "-c", script], stdin=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
+    try:
+        process.wait(timeout=20)  # stdin stays open, as it does while the app is running
+        err = process.stderr.read()
+    finally:
+        process.kill()
+        process.stdin.close()
+    assert process.returncode == 0, err.decode()
+    assert b"Fatal Python error" not in err

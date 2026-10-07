@@ -19,7 +19,7 @@ def main(argv: list[str] | None = None) -> int:
         import subprocess
 
         from handsdown.app import settings_command
-        from handsdown.preview import run_viewer
+        from handsdown.preview import end_viewer, run_viewer
 
         window = [None]
 
@@ -27,7 +27,7 @@ def main(argv: list[str] | None = None) -> int:
             if window[0] is None or window[0].poll() is not None:  # one settings window at a time
                 window[0] = subprocess.Popen(settings_command())
 
-        return run_viewer(open_settings=open_settings)
+        end_viewer(run_viewer(open_settings=open_settings))
     if "--self-test" in args:
         from handsdown.selftest import run_self_test
 

@@ -5,6 +5,7 @@ in-memory JPEG through a pipe to a separate viewer process (python -m handsdown 
 which shows it in an OpenCV window. Nothing is ever written to disk.
 """
 
+import os
 import struct
 import subprocess
 import sys
@@ -186,3 +187,12 @@ def run_viewer(stream=None, open_settings: Callable[[], None] = lambda: None) ->
             break  # closed with the window's close button
     cv2.destroyAllWindows()
     return 0
+
+
+def end_viewer(code: int) -> None:
+    """Exit the viewer process at once. A normal exit can abort: the reader thread is blocked on
+    stdin and holds its lock, which interpreter shutdown then waits for. There is nothing to clean up."""
+    for stream in (sys.stdout, sys.stderr):
+        if stream is not None:  # None in the windowed Windows build
+            stream.flush()
+    os._exit(code)
