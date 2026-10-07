@@ -1,6 +1,7 @@
 """python -m handsdown            start Hands Down in the tray
 python -m handsdown --settings   open the settings window
 python -m handsdown --camera-view  show frames the app sends (started by "Show camera")
+python -m handsdown --summary    show what the event log says about today and the last week
 python -m handsdown --self-test  check that a build can load its models and assets"""
 
 import os
@@ -28,6 +29,10 @@ def main(argv: list[str] | None = None) -> int:
                 window[0] = subprocess.Popen(settings_command())
 
         end_viewer(run_viewer(open_settings=open_settings))
+    if "--summary" in args:
+        from handsdown.summary import run_summary_window
+
+        return run_summary_window()
     if "--self-test" in args:
         from handsdown.selftest import run_self_test
 

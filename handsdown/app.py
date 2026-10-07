@@ -14,6 +14,7 @@ from handsdown.eventlog import EventLog
 from handsdown.paths import log_dir, settings_path
 from handsdown.preview import CameraView, annotate, encode
 from handsdown.settings import SettingsStore
+from handsdown.single import acquire
 from handsdown.tray import STATE_LABELS, draw_icon, menu_items
 
 PAUSES = {"pause_call": (None, "call"), "pause_15": (15 * 60, "15 min"), "pause_60": (60 * 60, "1 hour")}
@@ -33,6 +34,10 @@ def camera_view_command() -> list[str]:
     return _command("--camera-view")
 
 
+def summary_command() -> list[str]:
+    return _command("--summary")
+
+
 def open_folder(folder) -> None:
     folder.mkdir(parents=True, exist_ok=True)
     if sys.platform == "win32":
@@ -41,8 +46,27 @@ def open_folder(folder) -> None:
         subprocess.Popen(["open", str(folder)])
 
 
+def tell_already_running() -> None:
+    """A second launch quits, but says why instead of silently doing nothing."""
+    text = "Hands Down is already running. Its ring is in the system tray."
+    try:
+        if sys.platform == "win32":
+            import ctypes
+
+            ctypes.windll.user32.MessageBoxW(None, text, "Hands Down", 0x40)  # MB_ICONINFORMATION
+        else:
+            mac_notify("Hands Down", "Already running")
+    except Exception:
+        pass
+
+
 def run_app() -> int:
     log = EventLog(log_dir())
+    lock = acquire(settings_path().parent / "running.lock")
+    if lock is None:
+        log.write("error", message="Another copy is already running")
+        tell_already_running()
+        return 0
     store = SettingsStore(settings_path(), warn=lambda message: log.write("error", message=message))
     icon = pystray.Icon("handsdown", draw_icon(None), "Hands Down")
 
@@ -84,6 +108,8 @@ def run_app() -> int:
             view.open()
         elif action == "hide_camera":
             view.close()
+        elif action == "summary":
+            subprocess.Popen(summary_command())
         elif action == "settings":
             subprocess.Popen(settings_command())
         elif action == "open_log":
@@ -109,4 +135,5 @@ def run_app() -> int:
     engine.stop()
     if engine_thread.is_alive():
         engine_thread.join(timeout=3)  # let it release the camera and log "stop"
+    lock.release()
     return 0

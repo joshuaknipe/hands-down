@@ -26,8 +26,8 @@ def test_menu_when_watching():
     items = menu_items("watching", paused=False)
     assert items[0].label == STATE_LABELS["watching"] and not items[0].enabled
     actions = [i.action for i in items[1:]]
-    assert actions == ["pause_call", "pause_15", "pause_60", "false_alert", "show_camera", "settings", "open_log",
-                       "quit"]
+    assert actions == ["pause_call", "pause_15", "pause_60", "false_alert", "show_camera", "summary", "settings",
+                       "open_log", "quit"]
 
 
 def test_menu_when_paused_offers_resume_first():
@@ -53,3 +53,7 @@ def test_menu_offers_hide_camera_while_the_view_is_open():
     actions = [i.action for i in menu_items("watching", paused=False, camera_open=True)]
     assert "hide_camera" in actions and "show_camera" not in actions
     assert "show_camera" in [i.action for i in menu_items("watching", paused=False)]
+
+
+def test_summary_command_runs_this_module_from_source():
+    assert app.summary_command() == [sys.executable, "-m", "handsdown", "--summary"]
