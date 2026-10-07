@@ -1,0 +1,8 @@
+mediapipe==1.1.0
+opencv-contrib-python==5.0.0.93
+numpy==2.5.3
+winrt-runtime==3.2.1; sys_platform == "win32"
+winrt-Windows.Foundation==3.2.1; sys_platform == "win32"
+winrt-Windows.Foundation.Collections==3.2.1; sys_platform == "win32"
+winrt-Windows.Media.Capture==3.2.1; sys_platform == "win32"
+winrt-Windows.Media.Capture.Frames==3.2.1; sys_platform == "win32"
