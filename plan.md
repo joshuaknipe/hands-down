@@ -110,7 +110,7 @@ Alerts are gentle and configurable; the app stays out of the way and is discreet
 - **Alert types:** soft chime (default) and native notification, in any combination. Windows Focus Assist / Do Not Disturb silently suppresses notifications, which is why the chime is the default.
 - **Tray icon:** a thin ring. States: watching, paused, not tracking, camera busy.
 - **Tray menu:** pause for call, pause for 15 min / 1 hour / until resumed, "that wasn't me" (marks the last alert as false), settings, open log, quit.
-- **Settings:** zone margin, dwell time, grace window, release time, reminder alert, alert types, pause hotkey, start with Windows.
+- **Settings:** zone margin, dwell time, grace window, release time, reminder alert, alert types, alert sound and volume, pause while the screen is locked, pause hotkey, start with Windows.
 - **Event log:** one entry per episode (see Episodes), stored locally, so she can spot patterns by time of day or task.
 - **Naming:** nothing user-visible names the habit.
 

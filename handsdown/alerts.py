@@ -4,6 +4,7 @@ import subprocess
 import sys
 from typing import Callable
 
+from handsdown.chime import sound_file
 from handsdown.paths import resource_path
 from handsdown.settings import Settings
 
@@ -11,8 +12,9 @@ NOTIFICATION_TITLE = "Hands Down"
 NOTIFICATION_TEXT = "Gentle reminder"
 
 
-def play_chime(platform: str = sys.platform, runner=subprocess.Popen) -> None:
-    path = str(resource_path("assets/chime.wav"))
+def play_chime(sound: str = "chime", volume: str = "normal", platform: str = sys.platform,
+               runner=subprocess.Popen) -> None:
+    path = str(resource_path(sound_file(sound, volume)))
     if platform == "win32":
         import winsound
 

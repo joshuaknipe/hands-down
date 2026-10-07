@@ -43,7 +43,11 @@ def run_app() -> int:
         else:
             mac_notify(title, text)
 
-    alerter = Alerter(store.get, play_chime, notify, warn=lambda message: log.write("error", message=message))
+    def sound() -> None:
+        settings = store.get()
+        play_chime(settings.sound, settings.volume)
+
+    alerter = Alerter(store.get, sound, notify, warn=lambda message: log.write("error", message=message))
 
     def on_state(state: str) -> None:
         icon.icon = draw_icon(state)

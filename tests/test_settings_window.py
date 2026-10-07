@@ -3,8 +3,9 @@ import sys
 import pytest
 
 from handsdown import startup
-from handsdown.settings import Settings
-from handsdown.settings_window import REMINDER_CHOICES, ZONE_CHOICES, form_values, settings_from_form
+from handsdown.settings import LIMITS, SOUNDS, VOLUMES, Settings
+from handsdown.settings_window import (RELEASE_CHOICES, REMINDER_CHOICES, SOUND_CHOICES, VOLUME_CHOICES, ZONE_CHOICES,
+                                       form_values, settings_from_form)
 
 
 def test_form_shows_current_settings_in_plain_choices():
@@ -20,7 +21,7 @@ def test_unusual_values_show_the_closest_choice():
 
 def test_form_round_trip_keeps_hidden_settings():
     base = Settings(grace_s=2.0, release_s=5.0)
-    values = form_values(base) | {"dwell_s": 1.25, "notification": True, "reminder": "Off", "zone": "Small"}
+    values = form_values(base) | {"dwell_s": 1.25, "notification": True, "reminder": "Never", "zone": "Small"}
     result = settings_from_form(values, base)
     assert result.dwell_s == 1.25 and result.notification and result.reminder_s == 0.0
     assert result.zone_margin == ZONE_CHOICES["Small"]
@@ -33,8 +34,25 @@ def test_form_values_are_clamped():
 
 
 def test_every_choice_is_within_limits():
-    assert set(REMINDER_CHOICES.values()) <= {0.0, 30.0, 60.0, 120.0}
+    assert list(REMINDER_CHOICES.values()) == [0.0, 3.0, 5.0, 10.0, 15.0, 30.0, 60.0]
     assert all(0.1 <= v <= 1.5 for v in ZONE_CHOICES.values())
+    low, high = LIMITS["release_s"]
+    assert all(low <= v <= high for v in RELEASE_CHOICES.values())
+    assert list(SOUND_CHOICES.values()) == list(SOUNDS)
+    assert list(VOLUME_CHOICES.values()) == list(VOLUMES)
+
+
+def test_form_shows_sound_volume_release_and_lock():
+    values = form_values(Settings(sound="knock", volume="quiet", release_s=10.0, pause_when_locked=False))
+    assert values["sound"] == "Soft knock" and values["volume"] == "Quiet"
+    assert values["release"] == "10 seconds" and values["pause_when_locked"] is False
+
+
+def test_form_round_trip_of_the_new_choices():
+    values = form_values(Settings()) | {"sound": "Bell", "volume": "Medium", "release": "5 seconds",
+                                        "pause_when_locked": False}
+    result = settings_from_form(values, Settings())
+    assert (result.sound, result.volume, result.release_s, result.pause_when_locked) == ("bell", "medium", 5.0, False)
 
 
 class FakeKey:

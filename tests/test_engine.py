@@ -32,9 +32,11 @@ class Harness:
         self.settings = settings or Settings()
         self.alerts, self.states, self.opened = [], [], []
         self.cameras = list(cameras) if cameras is not None else None
+        self.locked = False
         self.log = EventLog(tmp_path)
         self.engine = Engine(lambda: self.settings, self.log, self.alerts.append, self.states.append,
-                             self.open, tracker_factory=lambda: ScriptedTracker(self.world), clock=self.clock)
+                             self.open, tracker_factory=lambda: ScriptedTracker(self.world), clock=self.clock,
+                             is_locked=lambda: self.locked)
 
     def open(self, index):
         if self.cameras is None:
@@ -170,3 +172,37 @@ def test_run_stops_releases_and_logs(tmp_path):
     thread.join(2)
     assert not thread.is_alive()
     assert h.kinds()[0] == "start" and h.kinds()[-1] == "stop"
+
+
+def test_locked_screen_pauses_until_unlocked(tmp_path):
+    h = Harness(tmp_path)
+    h.world["observation"] = Observation(0, (TEMPLE,), True, FACE)
+    h.run(1.0)
+    h.locked = True
+    h.run(5.0)
+    assert h.opened[0].released and h.states[-1] == "paused" and h.alerts == ["alert"]
+    pauses = [r for r in h.log.read() if r["kind"] == "pause"]
+    assert len(pauses) == 1 and pauses[0]["reason"] == "screen locked"
+    assert [r["ended"] for r in h.log.read() if r["kind"] == "episode"] == ["interrupted"]
+    h.locked = False
+    h.run(0.5)
+    assert h.states[-1] == "watching" and len(h.opened) == 2
+    assert h.kinds().count("resume") == 1
+
+
+def test_locked_screen_is_ignored_when_the_setting_is_off(tmp_path):
+    h = Harness(tmp_path, settings=Settings(pause_when_locked=False))
+    h.locked = True
+    h.run(1.0)
+    assert h.states == ["watching"] and "pause" not in h.kinds()
+
+
+def test_unlocking_during_a_manual_pause_stays_paused(tmp_path):
+    h = Harness(tmp_path)
+    h.run(0.5)
+    h.engine.pause(None, "call")
+    h.locked = True
+    h.run(1.0)
+    h.locked = False
+    h.run(1.0)
+    assert h.states[-1] == "paused" and h.engine.paused

@@ -13,6 +13,7 @@ from typing import Callable
 from handsdown.episodes import EpisodeTracker, Event, Timing
 from handsdown.eventlog import EventLog
 from handsdown.landmarks import Tracker
+from handsdown.screenlock import is_screen_locked
 from handsdown.settings import Settings
 from handsdown.zone import contact
 
@@ -26,7 +27,7 @@ PAUSED_CHECK_S = 0.5
 class Engine:
     def __init__(self, settings: Callable[[], Settings], log: EventLog, alert: Callable[[str], None],
                  on_state: Callable[[str], None], open_capture: Callable[[int], object],
-                 tracker_factory=Tracker, clock=time.monotonic, wall=datetime.now):
+                 tracker_factory=Tracker, clock=time.monotonic, wall=datetime.now, is_locked=is_screen_locked):
         self._settings = settings
         self._log = log
         self._alert = alert
@@ -35,6 +36,8 @@ class Engine:
         self._tracker_factory = tracker_factory
         self.clock = clock
         self._wall = wall
+        self._is_locked = is_locked
+        self._locked = False
         self._lock = threading.Lock()
         self._stop = threading.Event()
         self._pause_until: float | None = None  # clock time to resume at; math.inf until resumed
@@ -92,6 +95,10 @@ class Engine:
             self._set_state("paused")
             return PAUSED_CHECK_S
         settings = self._settings()
+        if self._screen_locked(settings):
+            self._release(now)
+            self._set_state("paused")
+            return PAUSED_CHECK_S
         if self._capture is None:
             self._capture = self._open_capture(settings.camera_index)
             if self._capture is None:
@@ -125,6 +132,16 @@ class Engine:
         if resumed:
             self._log.write("resume")
         return paused
+
+    def _screen_locked(self, settings: Settings) -> bool:
+        locked = settings.pause_when_locked and self._is_locked()
+        if locked != self._locked:
+            self._locked = locked
+            if locked:
+                self._log.write("pause", reason="screen locked", minutes=None)
+            else:
+                self._log.write("resume")
+        return locked
 
     def _process(self, frame, now: float, settings: Settings) -> None:
         if self._tracker is None:

@@ -9,6 +9,9 @@ from dataclasses import asdict, dataclass, fields, replace
 from pathlib import Path
 from typing import Callable
 
+SOUNDS = ("chime", "bell", "knock", "rising")
+VOLUMES = ("quiet", "medium", "normal")
+
 
 @dataclass(frozen=True)
 class Settings:
@@ -18,9 +21,12 @@ class Settings:
     reminder_s: float = 0.0  # repeat the alert after this long in one episode; 0 is off
     zone_margin: float = 0.5  # how far the head zone reaches beside the face, in face widths
     chime: bool = True
+    sound: str = "chime"  # one of SOUNDS
+    volume: str = "normal"  # one of VOLUMES
     notification: bool = False
     start_with_windows: bool = False
     camera_index: int = 0
+    pause_when_locked: bool = True  # release the camera while the screen is locked
 
 
 LIMITS = {
@@ -32,15 +38,23 @@ LIMITS = {
     "camera_index": (0, 9),
 }
 
+CHOICES = {"sound": SOUNDS, "volume": VOLUMES}
+
 
 def clamp(settings: Settings) -> Settings:
     changes = {name: min(max(getattr(settings, name), low), high) for name, (low, high) in LIMITS.items()}
+    defaults = Settings()
+    for name, allowed in CHOICES.items():
+        if getattr(settings, name) not in allowed:
+            changes[name] = getattr(defaults, name)
     return replace(settings, **changes)
 
 
 def _accepts(default, value) -> bool:
     if isinstance(default, bool):
         return isinstance(value, bool)
+    if isinstance(default, str):
+        return isinstance(value, str)
     if isinstance(default, int):
         return isinstance(value, int) and not isinstance(value, bool)
     return isinstance(value, (int, float)) and not isinstance(value, bool)

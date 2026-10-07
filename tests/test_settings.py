@@ -51,3 +51,19 @@ def test_store_reloads_when_the_file_changes(tmp_path):
     assert store.get().dwell_s == 2.0
     path.unlink()
     assert store.get() == Settings()
+
+
+def test_sound_choices_survive_a_round_trip(tmp_path):
+    path = tmp_path / "settings.json"
+    custom = Settings(sound="bell", volume="quiet", pause_when_locked=False)
+    save_settings(path, custom)
+    assert load_settings(path) == custom
+
+
+def test_unknown_sound_or_volume_falls_back_to_the_default(tmp_path):
+    path = tmp_path / "settings.json"
+    path.write_text(json.dumps({"sound": "air horn", "volume": 11, "pause_when_locked": "no"}))
+    loaded = load_settings(path)
+    assert loaded.sound == Settings().sound and loaded.volume == Settings().volume
+    assert loaded.pause_when_locked is True
+    assert clamp(Settings(sound="nope", volume="loud")) == Settings()
