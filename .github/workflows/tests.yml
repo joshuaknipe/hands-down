@@ -20,6 +20,8 @@ jobs:
   build:
     needs: windows
     runs-on: windows-latest
+    permissions:
+      contents: write  # to publish a release when a version tag is pushed
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -27,14 +29,29 @@ jobs:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: requirements-dev.txt
-      - run: python -m pip install -r requirements-dev.txt
-      - run: pyinstaller --noconfirm packaging/handsdown.spec
-      - name: Self-test the frozen build
+      # Run install.ps1 the way the README does, in Windows PowerShell 5.1 like a stock laptop.
+      - name: Install with install.ps1 (fresh)
+        shell: cmd
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File install.ps1 -NoStart
+      - name: Install with install.ps1 again (the update path)
+        shell: cmd
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File install.ps1 -NoStart
+      - name: Self-test the installed app
         shell: pwsh
         run: |
-          $p = Start-Process -FilePath "dist\HandsDown\HandsDown.exe" -ArgumentList "--self-test" -Wait -PassThru
+          $exe = Join-Path $env:LOCALAPPDATA "Programs\HandsDown\HandsDown.exe"
+          $p = Start-Process -FilePath $exe -ArgumentList "--self-test" -Wait -PassThru
           if ($p.ExitCode -ne 0) { throw "Self-test failed with exit code $($p.ExitCode)" }
+      - name: Zip the app
+        shell: pwsh
+        run: Compress-Archive -Path dist\HandsDown -DestinationPath HandsDown-windows.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: HandsDown
-          path: dist/HandsDown
+          name: HandsDown-windows
+          path: HandsDown-windows.zip
+      - name: Publish a release for version tags
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ github.ref_name }}" HandsDown-windows.zip --title "Hands Down ${{ github.ref_name }}" --generate-notes

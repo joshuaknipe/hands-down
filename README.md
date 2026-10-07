@@ -7,59 +7,59 @@ or hair for more than a moment. It is a nudge to notice a habit, not a blocker o
 - Everything happens on your computer. No images are ever saved and nothing is sent anywhere.
 - The log keeps only times, durations and states, so you can see patterns by time of day.
 
-## What you need
+## Install on Windows (easiest)
 
-- **Windows 10 or 11** (the main target) or **macOS** (works for development and testing).
-- A webcam.
-- **Python 3.12** exactly. Newer versions are not supported yet by the vision library it uses.
-- **Git**, to download the code.
+No Python or other tools needed.
 
-## Install on Windows
-
-Open **PowerShell** (press Start, type `powershell`, press Enter) and run these one at a time.
-
-1. Install Python 3.12 and Git, if you do not have them:
-
-   ```powershell
-   winget install Python.Python.3.12
-   winget install Git.Git
-   ```
-
-   Close and reopen PowerShell afterwards so it finds them.
-
-2. Download Hands Down and set it up:
-
-   ```powershell
-   cd $HOME
-   git clone https://github.com/joshuaknipe/hands-down.git
-   cd hands-down
-   py -3.12 -m venv .venv
-   .venv\Scripts\python.exe -m pip install -r requirements-dev.txt
-   ```
-
-3. Build the app (takes a minute or two):
-
-   ```powershell
-   .venv\Scripts\pyinstaller.exe --noconfirm packaging\handsdown.spec
-   (Start-Process dist\HandsDown\HandsDown.exe -ArgumentList --self-test -Wait -PassThru).ExitCode
-   ```
-
-   `0` means the build works.
-
-4. Put it somewhere permanent and start it:
-
-   ```powershell
-   Copy-Item -Recurse dist\HandsDown "$env:LOCALAPPDATA\Programs\HandsDown"
-   Start-Process "$env:LOCALAPPDATA\Programs\HandsDown\HandsDown.exe"
-   ```
-
+1. Go to the [latest release](https://github.com/joshuaknipe/hands-down/releases/latest) and
+   download **HandsDown-windows.zip**.
+2. Right-click the downloaded zip, choose **Extract All…**, and extract it somewhere you will keep
+   it, for example your **Documents** folder.
+3. Open the extracted **HandsDown** folder and double-click **HandsDown.exe**.
    Windows SmartScreen may warn the first time, because the app is not signed: choose
    **More info**, then **Run anyway**.
-
-5. A thin ring appears in the system tray. If you cannot see it, click the **^** arrow by the
+4. A thin ring appears in the system tray. If you cannot see it, click the **^** arrow by the
    clock, and drag the ring onto the taskbar to keep it visible. Teal means it is watching.
+5. To start it automatically: click the ring, choose **Settings…** and tick **Start with Windows**.
+   This remembers where the folder is, so if you move the folder later, untick and tick it again.
 
-6. To start it automatically: click the ring, choose **Settings…** and tick **Start with Windows**.
+**To update:** click the ring and choose **Quit**, delete the old **HandsDown** folder, and extract
+the new release in the same place. Settings and the log are kept: they live in your user profile,
+not in the app folder.
+
+## Build it yourself on Windows
+
+To build from the code instead, for example to get changes before they are released.
+You need a webcam, **Python 3.12** exactly (newer versions are not supported yet by the vision
+library it uses) and **Git**.
+
+Open **PowerShell** (press Start, type `powershell`, press Enter) and run:
+
+```powershell
+winget install Python.Python.3.12
+winget install Git.Git
+```
+
+Close PowerShell and open it again, so it finds them. Then:
+
+```powershell
+git clone https://github.com/joshuaknipe/hands-down.git $HOME\hands-down
+powershell -ExecutionPolicy Bypass -File $HOME\hands-down\install.ps1
+```
+
+The script downloads the components it needs (several minutes the first time), builds the app,
+checks that the build works, installs it to `%LOCALAPPDATA%\Programs\HandsDown` and starts it.
+Then continue from step 4 above.
+
+**To update:**
+
+```powershell
+cd $HOME\hands-down
+git pull
+powershell -ExecutionPolicy Bypass -File install.ps1
+```
+
+The script quits the running copy and replaces it.
 
 ## Using it
 
@@ -78,22 +78,6 @@ Click the ring for the menu:
 
 The ring's colour shows the state: teal is watching, amber means it cannot see your face,
 red means another app is using the camera, grey is paused.
-
-## Updating
-
-Click the ring and choose **Quit**, then in PowerShell:
-
-```powershell
-cd $HOME\hands-down
-git pull
-.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
-.venv\Scripts\pyinstaller.exe --noconfirm packaging\handsdown.spec
-Remove-Item -Recurse "$env:LOCALAPPDATA\Programs\HandsDown"
-Copy-Item -Recurse dist\HandsDown "$env:LOCALAPPDATA\Programs\HandsDown"
-Start-Process "$env:LOCALAPPDATA\Programs\HandsDown\HandsDown.exe"
-```
-
-Settings and the log are kept: they live in your user profile, not in the app folder.
 
 ## Run from source (Windows or macOS)
 
@@ -135,5 +119,11 @@ then start it again.
 - `handsdown/`: the app. Detection (`zone.py`, `episodes.py`) is pure Python and tested without a camera.
 - `feasibility/`: developer tools, including `evaluate`, which runs the detector over recorded clips.
 - `models/`: the MediaPipe hand and face models, committed so builds need no network.
-- Pushes to GitHub run the tests on Windows, and also build the Windows app as a downloadable
-  artifact in the Actions tab.
+- Pushes to GitHub run the tests on Windows, then build the app with `install.ps1` (twice, to check
+  updating too) and keep the zip as an artifact in the Actions tab.
+- To publish a release, tag a version and push the tag; CI attaches `HandsDown-windows.zip`:
+
+  ```bash
+  git tag v0.1.0
+  git push origin v0.1.0
+  ```
