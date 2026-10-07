@@ -7,3 +7,5 @@ winrt-Windows.Foundation.Collections==3.2.1; sys_platform == "win32"
 winrt-Windows.Media.Capture==3.2.1; sys_platform == "win32"
 winrt-Windows.Media.Capture.Frames==3.2.1; sys_platform == "win32"
 platformdirs==4.12.3
+pystray==0.19.5
+Pillow==12.3.0

@@ -36,7 +36,7 @@ Hands Down is a native Python tray app, developed on macOS and shipped to Window
 | Vision | MediaPipe Tasks: HandLandmarker (VIDEO mode) and FaceLandmarker or Pose for the head zone; the multiclass selfie segmenter for hair if milestone 4 goes ahead | Pretrained, runs on CPU in real time, models ship as local files; the multiclass segmenter labels hair and face skin separately | Training a custom model; hair-only segmenter (cannot tell hair from cheek) |
 | Camera | OpenCV, explicit backend per OS (AVFoundation on Mac, DirectShow on Windows, Media Foundation as fallback), unless milestone 1 shows shared capture is needed on Windows | Default backend can be slow to open on Windows | — |
 | Tray | pystray | Same API on both OSes | rumps (Mac only) |
-| Notifications | desktop-notifier | Native notifications on both OSes | plyer, win10toast |
+| Notifications | pystray's own notifications on Windows (osascript on the Mac for development) | Shown by the tray icon itself, so no extra library or app registration is needed | desktop-notifier, plyer, win10toast |
 | Sound | winsound on Windows, afplay on Mac, behind one function | Avoids flaky third-party audio packages | playsound, simpleaudio |
 | Storage | Settings and event log in the per-user app data folder via platformdirs | Correct location on both OSes | Files next to the .exe |
 | Packaging | PyInstaller `--onedir`, zipped or wrapped in a simple installer, built on a GitHub Actions windows-latest runner from milestone 2 | `--onefile` unpacks to a temp folder on every launch and is more often flagged by Defender and SmartScreen; PyInstaller cannot cross-compile | `--onefile`; building by hand on her laptop |
@@ -123,7 +123,7 @@ Develop on macOS, but run on Windows from milestone 1 and ship a CI-built packag
 - **Mac camera permission:** Terminal or the IDE needs camera access in development.
 - **CI:** a GitHub Actions workflow on windows-latest installs pinned requirements, runs detection-core tests, builds the package and uploads it as an artifact.
 - **Code signing:** the build is unsigned in v1, so she should expect a SmartScreen prompt on first launch.
-- **Start with Windows:** a shortcut in the user Startup folder, toggled from settings.
+- **Start with Windows:** the packaged build adds itself to the per-user `Run` registry key, toggled from settings. (A Startup-folder shortcut would need pywin32 to create the `.lnk`.)
 - **Windows-only checks on her laptop:** camera coexistence with Teams (milestone 1), notification appearance and app name, startup behaviour, lighting and camera angle.
 
 ## Privacy and testing

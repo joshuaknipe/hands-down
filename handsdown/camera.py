@@ -178,3 +178,13 @@ def stop_reader(thread: threading.Thread, stop: threading.Event, source, timeout
         return False
     source.close()
     return True
+
+
+def open_first_camera(index: int):
+    """The first backend for this OS that delivers a real frame, or None if the camera is busy or missing."""
+    for backend in backends_for_platform():
+        result = open_camera(index, backend)
+        if result.ok:
+            result.capture.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # read the newest frame, not a stale queued one
+            return result.capture
+    return None
