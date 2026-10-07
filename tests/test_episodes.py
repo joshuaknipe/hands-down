@@ -85,3 +85,16 @@ def test_timing_changes_apply_immediately():
     assert run(tracker, 0.0, 1.0, True) == []
     tracker.timing = Timing(dwell_s=0.5)
     assert kinds(run(tracker, 1.0, 1.2, True)) == ["alert"]
+
+
+def test_reminder_never_fires_after_the_hand_has_left():
+    tracker = EpisodeTracker(Timing(reminder_s=2.0))
+    events = run(tracker, 0.0, 1.0, True) + run(tracker, 1.0, 5.0, False)
+    assert kinds(events) == ["alert", "episode"]
+
+
+def test_reminder_waits_for_contact_to_come_back_within_the_episode():
+    tracker = EpisodeTracker(Timing(reminder_s=2.0))
+    events = run(tracker, 0.0, 1.0, True) + run(tracker, 1.0, 3.0, False) + run(tracker, 3.0, 3.5, True)
+    assert kinds(events) == ["alert", "reminder"]
+    assert events[1].time == pytest.approx(3.0)

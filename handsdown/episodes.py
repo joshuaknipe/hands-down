@@ -52,7 +52,7 @@ class EpisodeTracker:
         elif self.state == "active":
             if now - self._last_contact >= t.release_s:
                 return [self._end(self._last_contact, "released")]
-            if t.reminder_s > 0 and now - self._last_alert >= t.reminder_s - 1e-9:
+            if t.reminder_s > 0 and contact and now - self._last_alert >= t.reminder_s - 1e-9:
                 self._last_alert = now
                 return [Event("reminder", now)]
         return []
