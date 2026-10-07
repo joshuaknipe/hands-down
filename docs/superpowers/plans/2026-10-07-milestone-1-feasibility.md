@@ -2686,7 +2686,7 @@ git commit -m "Add Windows shared camera probe to the coexistence test"
 
 **Interfaces:**
 - Consumes: the CLI commands `probe`, `coexist`, `record`, `analyse`; labels from `feasibility/clips.py`; thresholds from `feasibility/stats.py` and `feasibility/coexist.py`.
-- Produces: a green test run on windows-latest, and the document used at her laptop.
+- Produces: a green test run on windows-latest, the document used at her laptop, and a full rehearsal of that session on the Mac.
 
 - [ ] **Step 1: Add the workflow**
 
@@ -2850,7 +2850,18 @@ in `plan.md`.
 Keep the `clips` folder on her laptop for milestone 3, or delete it whenever she wants.
 ````
 
-- [ ] **Step 4: Commit and push**
+- [ ] **Step 4: Rehearse the whole session on the Mac**
+
+Follow the runbook from section 2 to section 5 on the Mac, as if at her laptop, using `.venv/bin/python` in place of `python`:
+
+1. `probe`: one `avfoundation` line, opened, 10+ fps.
+2. `coexist --observe 5`: walk every prompt; the report is written.
+3. `record`: at least 3 clips for each hair label and 1 for each other label, following the runbook's instructions exactly as written.
+4. `analyse`: the table lists every clip and the verdict is GO, NO-GO or INCOMPLETE with a reason.
+
+Anything confusing, wrong or missing in the runbook or the tool's prompts gets fixed now, with tests for any code change. Then delete the rehearsal data: `rm -r clips reports`.
+
+- [ ] **Step 5: Commit and push**
 
 ```bash
 git add docs/milestone-1-runbook.md
