@@ -22,6 +22,8 @@ def main(argv: list[str] | None = None) -> int:
     record.add_argument("--camera", type=int, default=0, help="camera index (default 0)")
     record.add_argument("--backend", default=None, help="camera backend (default: the first for this OS)")
 
+    sub.add_parser("analyse", help="Measure hand visibility in recorded clips and give a verdict")
+
     args = parser.parse_args(argv)
 
     if args.command == "probe":
@@ -37,6 +39,11 @@ def main(argv: list[str] | None = None) -> int:
             parser.error(f"--label must be one of: {', '.join(LABELS)}")
         backend = backend_by_name(args.backend) if args.backend else backends_for_platform()[0]
         return run_record(args.label, args.camera, backend, clips_dir())
+    if args.command == "analyse":
+        from feasibility.analyse import run_analyse
+        from handsdown.paths import clips_dir, reports_dir
+
+        return run_analyse(clips_dir(), reports_dir())
     return 2
 
 
