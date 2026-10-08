@@ -217,6 +217,32 @@ def test_frame_sink_sees_each_frame_with_its_contact(tmp_path):
     assert seen == [(True, Settings())] * 4
 
 
+def test_contact_sink_waits_for_the_alert_delay_and_hears_it_end_on_pause(tmp_path):
+    h = Harness(tmp_path, settings=Settings(dwell_s=0.5))
+    seen = []
+    h.engine.contact_sink = lambda touching, settings: seen.append(touching)
+    h.world["observation"] = Observation(0, (TEMPLE,), True, FACE)
+    h.run(0.75)
+    assert seen == [False] * 4 + [True, True] and h.alerts == ["alert"]
+    h.world["observation"] = Observation(0, (), True, FACE)
+    h.run(0.125)
+    h.engine.pause(None, "call")
+    h.run(0.125)
+    assert seen[-2:] == [False, False]
+
+
+def test_a_failing_contact_sink_is_dropped_and_the_engine_keeps_going(tmp_path):
+    h = Harness(tmp_path)
+
+    def broken(*args):
+        raise RuntimeError("border exploded")
+
+    h.engine.contact_sink = broken
+    h.world["observation"] = Observation(0, (TEMPLE,), True, FACE)
+    h.run(1.0)
+    assert h.alerts == ["alert"] and h.engine.contact_sink is None
+
+
 def test_zone_shape_settings_reach_the_detector(tmp_path):
     h = Harness(tmp_path, settings=Settings(zone_above=0.0))
     h.world["observation"] = Observation(0, (tuple((0.5, 0.15) for _ in range(21)),), True, FACE)  # top of head

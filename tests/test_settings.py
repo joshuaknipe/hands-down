@@ -10,7 +10,7 @@ def test_missing_file_gives_defaults(tmp_path):
 
 def test_settings_round_trip(tmp_path):
     path = tmp_path / "sub" / "settings.json"
-    custom = Settings(dwell_s=1.5, chime=False, notification=True, camera_index=1)
+    custom = Settings(dwell_s=1.5, chime=False, notification=True, screen_border=True, camera_index=1)
     save_settings(path, custom)
     assert load_settings(path) == custom
 

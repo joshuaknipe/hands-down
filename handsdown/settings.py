@@ -27,6 +27,7 @@ class Settings:
     sound: str = "chime"  # one of SOUNDS
     volume: str = "normal"  # one of VOLUMES
     notification: bool = False
+    screen_border: bool = False  # a red border round the screen from the alert until the hand moves away
     start_with_windows: bool = False
     camera_index: int = 0
     pause_when_locked: bool = True  # release the camera while the screen is locked

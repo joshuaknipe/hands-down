@@ -35,6 +35,7 @@ def form_values(settings: Settings) -> dict:
         "sound": _label(SOUND_CHOICES, settings.sound),
         "volume": _label(VOLUME_CHOICES, settings.volume),
         "notification": settings.notification,
+        "screen_border": settings.screen_border,
         "dwell_s": settings.dwell_s,
         "reminder": _closest(REMINDER_CHOICES, settings.reminder_s),
         "release": _closest(RELEASE_CHOICES, settings.release_s),
@@ -52,6 +53,7 @@ def settings_from_form(values: dict, base: Settings) -> Settings:
         sound=SOUND_CHOICES[values["sound"]],
         volume=VOLUME_CHOICES[values["volume"]],
         notification=bool(values["notification"]),
+        screen_border=bool(values["screen_border"]),
         dwell_s=round(float(values["dwell_s"]), 2),
         reminder_s=REMINDER_CHOICES[values["reminder"]],
         release_s=RELEASE_CHOICES[values["release"]],
@@ -111,6 +113,7 @@ def run_settings_window(path: Path | None = None) -> int:
     release = tk.StringVar(value=values["release"])
     pause_when_locked = tk.BooleanVar(value=values["pause_when_locked"])
     notification = tk.BooleanVar(value=values["notification"])
+    screen_border = tk.BooleanVar(value=values["screen_border"])
     dwell = tk.DoubleVar(value=values["dwell_s"])
     reminder = tk.StringVar(value=values["reminder"])
     zone = {name: tk.DoubleVar(value=values[name]) for name in ZONE_SLIDERS}
@@ -142,6 +145,8 @@ def run_settings_window(path: Path | None = None) -> int:
 
     ttk.Button(frame, text="Play", command=test_sound).grid(row=row - 1, column=2, sticky="w")
     add("Notification", ttk.Checkbutton(frame, variable=notification))
+    add("Red border round the screen", ttk.Checkbutton(frame, variable=screen_border))
+    hint("From the alert until the hand moves away. Seen by others if you share your screen")
     def slider(label: str, variable: tk.DoubleVar, low: float, high: float, fmt: str) -> None:
         shown = ttk.Label(frame, text=fmt.format(variable.get()))
         add(label, ttk.Scale(frame, from_=low, to=high, variable=variable, length=180,
@@ -173,7 +178,8 @@ def run_settings_window(path: Path | None = None) -> int:
         try:
             saver.update({
                 "chime": chime.get(), "sound": sound.get(), "volume": volume.get(),
-                "notification": notification.get(), "dwell_s": dwell.get(), "reminder": reminder.get(),
+                "notification": notification.get(), "screen_border": screen_border.get(), "dwell_s": dwell.get(),
+                "reminder": reminder.get(),
                 "release": release.get(), "pause_when_locked": pause_when_locked.get(),
                 **{name: variable.get() for name, variable in zone.items()},
                 "start_with_windows": start.get(),
@@ -189,8 +195,8 @@ def run_settings_window(path: Path | None = None) -> int:
             root.after_cancel(pending[0])
         pending[0] = root.after(300, save_now)  # wait until a slider drag settles
 
-    for variable in (chime, sound, volume, notification, dwell, reminder, release, pause_when_locked, start, camera,
-                     *zone.values()):
+    for variable in (chime, sound, volume, notification, screen_border, dwell, reminder, release, pause_when_locked,
+                     start, camera, *zone.values()):
         variable.trace_add("write", changed)
 
     def close() -> None:

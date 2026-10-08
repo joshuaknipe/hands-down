@@ -9,7 +9,8 @@ import pystray
 
 from handsdown.alerts import Alerter, mac_notify, play_chime
 from handsdown.camera import open_first_camera
-from handsdown.commands import camera_view_command, settings_command, summary_command
+from handsdown.border import Border
+from handsdown.commands import border_command, camera_view_command, settings_command, summary_command
 from handsdown.engine import Engine
 from handsdown.eventlog import EventLog
 from handsdown.paths import log_dir, settings_path
@@ -83,6 +84,8 @@ def run_app() -> int:
             view.send(encode(annotate(frame, observation, settings, touching)))
 
     engine.frame_sink = show
+    border = Border(border_command())
+    engine.contact_sink = lambda touching, settings: border.update(settings.screen_border, touching)
 
     def act(action: str) -> None:
         if action in PAUSES:

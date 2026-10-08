@@ -55,6 +55,10 @@ def test_menu_offers_hide_camera_while_the_view_is_open():
     assert "show_camera" in [i.action for i in menu_items("watching", paused=False)]
 
 
+def test_border_command_runs_this_module_from_source():
+    assert app.border_command() == [sys.executable, "-m", "handsdown", "--border"]
+
+
 def test_summary_command_runs_this_module_from_source():
     assert app.summary_command() == [sys.executable, "-m", "handsdown", "--summary"]
 

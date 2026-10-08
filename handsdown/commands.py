@@ -20,5 +20,9 @@ def camera_view_command() -> list[str]:
     return _command("--camera-view")
 
 
+def border_command() -> list[str]:
+    return _command("--border")
+
+
 def summary_command() -> list[str]:
     return _command("--summary")

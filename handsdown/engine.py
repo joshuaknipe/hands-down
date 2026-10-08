@@ -49,6 +49,7 @@ class Engine:
         self._last_alert_wall: datetime | None = None
         self.state: str | None = None
         self.frame_sink = None  # called with (frame, observation, contact, settings) while the camera view is open
+        self.contact_sink = None  # called with (contact past the alert delay, settings) each frame, False on release
 
     # Called from the tray thread.
 
@@ -157,7 +158,18 @@ class Engine:
                            settings.chin_cutout)
         for event in self._episodes.update(now, touching):
             self._handle(event)
+        self._report_contact(touching and self._episodes.state == "active", settings)
         self._show(frame, observation, touching, settings)
+
+    def _report_contact(self, touching: bool, settings: Settings) -> None:
+        sink = self.contact_sink
+        if sink is None:
+            return
+        try:
+            sink(touching, settings)
+        except Exception as exc:
+            self.contact_sink = None  # a broken border must never stop detection
+            self._log.write("error", message=f"Screen border failed: {exc}")
 
     def _show(self, frame, observation, touching: bool, settings: Settings) -> None:
         sink = self.frame_sink
@@ -181,6 +193,7 @@ class Engine:
     def _release(self, now: float) -> None:
         for event in self._episodes.reset(now):
             self._handle(event)
+        self._report_contact(False, self._settings())
         if self._capture is not None:
             self._capture.release()
             self._capture = None

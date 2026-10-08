@@ -19,7 +19,8 @@ a = Analysis(
         *collect_data_files("mediapipe"),
     ],
     binaries=collect_dynamic_libs("mediapipe"),
-    hiddenimports=["pystray._darwin" if mac else "pystray._win32", "PIL._tkinter_finder"],
+    hiddenimports=["pystray._darwin" if mac else "pystray._win32", "PIL._tkinter_finder",
+                   *(["PyObjCTools.AppHelper", "Quartz"] if mac else [])],
     excludes=["feasibility", "pytest"],
 )
 pyz = PYZ(a.pure)

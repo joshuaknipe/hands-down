@@ -20,9 +20,10 @@ def test_unusual_values_show_the_closest_choice():
 
 def test_form_round_trip_keeps_hidden_settings():
     base = Settings(grace_s=2.0, release_s=5.0)
-    values = form_values(base) | {"dwell_s": 1.25, "notification": True, "reminder": "Never", "zone_margin": 0.3}
+    values = form_values(base) | {"dwell_s": 1.25, "notification": True, "screen_border": True, "reminder": "Never",
+                                  "zone_margin": 0.3}
     result = settings_from_form(values, base)
-    assert result.dwell_s == 1.25 and result.notification and result.reminder_s == 0.0
+    assert result.dwell_s == 1.25 and result.notification and result.screen_border and result.reminder_s == 0.0
     assert result.zone_margin == 0.3
     assert (result.grace_s, result.release_s) == (2.0, 5.0)
 
