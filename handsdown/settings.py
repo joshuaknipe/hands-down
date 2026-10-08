@@ -9,7 +9,7 @@ from dataclasses import asdict, dataclass, fields, replace
 from pathlib import Path
 from typing import Callable
 
-SOUNDS = ("chime", "bell", "knock", "rising")
+SOUNDS = ("chime", "bell", "knock", "rising", "low", "buzz", "beeps", "warble", "honk")
 VOLUMES = ("quiet", "medium", "normal")
 
 

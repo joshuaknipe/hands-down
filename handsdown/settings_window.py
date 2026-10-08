@@ -12,12 +12,13 @@ from handsdown.paths import settings_path
 from handsdown.settings import LIMITS, Settings, clamp, load_settings, save_settings
 
 REMINDER_CHOICES = {
-    "Never": 0.0, "Every 3 seconds": 3.0, "Every 5 seconds": 5.0, "Every 10 seconds": 10.0,
+    "Never": 0.0, "Continuously": 1.5, "Every 3 seconds": 3.0, "Every 5 seconds": 5.0, "Every 10 seconds": 10.0,
     "Every 15 seconds": 15.0, "Every 30 seconds": 30.0, "Every minute": 60.0,
 }
 RELEASE_CHOICES = {"2 seconds": 2.0, "3 seconds": 3.0, "5 seconds": 5.0, "10 seconds": 10.0, "30 seconds": 30.0}
 ZONE_SLIDERS = ("zone_margin", "zone_above", "zone_below", "chin_cutout")
-SOUND_CHOICES = {"Chime": "chime", "Bell": "bell", "Soft knock": "knock", "Rising": "rising"}
+SOUND_CHOICES = {"Chime": "chime", "Bell": "bell", "Soft knock": "knock", "Rising": "rising", "Low tone": "low",
+                 "Buzz": "buzz", "Beeps": "beeps", "Warble": "warble", "Honk": "honk"}
 VOLUME_CHOICES = {"Quiet": "quiet", "Medium": "medium", "Normal": "normal"}
 
 
@@ -156,7 +157,7 @@ def run_settings_window(path: Path | None = None) -> int:
     slider("Wait before alerting", dwell, 0.2, 3.0, "{:.1f} s")
     add("Repeat the alert", ttk.Combobox(frame, textvariable=reminder, state="readonly",
                                          values=list(REMINDER_CHOICES), width=18))
-    hint("One alert per touch unless set")
+    hint("Repeats stop as soon as the hand moves away")
     add("Next alert needs hands away for", ttk.Combobox(frame, textvariable=release, state="readonly",
                                                         values=list(RELEASE_CHOICES), width=18))
     hint("A shorter break counts as the same touch")

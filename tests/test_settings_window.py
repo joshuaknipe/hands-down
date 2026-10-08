@@ -34,7 +34,7 @@ def test_form_values_are_clamped():
 
 
 def test_every_choice_is_within_limits():
-    assert list(REMINDER_CHOICES.values()) == [0.0, 3.0, 5.0, 10.0, 15.0, 30.0, 60.0]
+    assert list(REMINDER_CHOICES.values()) == [0.0, 1.5, 3.0, 5.0, 10.0, 15.0, 30.0, 60.0]
     low, high = LIMITS["release_s"]
     assert all(low <= v <= high for v in RELEASE_CHOICES.values())
     assert list(SOUND_CHOICES.values()) == list(SOUNDS)

@@ -36,7 +36,48 @@ def rising() -> np.ndarray:
     return np.concatenate([_tone(660, 0.35, 0.25), _tone(880, 0.6, 0.25)])
 
 
-SOUNDS = {"chime": chime, "bell": bell, "knock": knock, "rising": rising}
+def low() -> np.ndarray:
+    # a deep G3; laptop speakers barely play it, so its overtones carry the pitch
+    return (_tone(196, 1.2, 0.13, decay=2.5) + _tone(392, 1.2, 0.12, decay=3.0)
+            + _tone(588, 1.2, 0.05, decay=4.0))
+
+
+def _pulse(freq: float, seconds: float, volume: float, harmonics: int = 1) -> np.ndarray:
+    """A steady tone that does not fade away, made harsher by odd harmonics (a softened square wave)."""
+    t = np.arange(int(RATE * seconds)) / RATE
+    envelope = np.minimum(1.0, np.minimum(t, seconds - t) / 0.005)  # 5 ms fades: no clicks
+    wave_ = sum(np.sin(2 * np.pi * freq * k * t) / k for k in range(1, 2 * harmonics, 2))
+    return volume * envelope * wave_ / np.abs(wave_).max()
+
+
+def _gap(seconds: float) -> np.ndarray:
+    return np.zeros(int(RATE * seconds))
+
+
+# Harder to ignore than the soft tones above, but still short and not alarm-like.
+
+def buzz() -> np.ndarray:
+    pulse = _pulse(160, 0.16, 0.22, harmonics=6)  # like a phone vibrating on a desk
+    return np.concatenate([_gap(0.01), pulse, _gap(0.08), pulse, _gap(0.08), pulse])
+
+
+def beeps() -> np.ndarray:
+    beep = _pulse(1800, 0.09, 0.2, harmonics=2)
+    return np.concatenate([_gap(0.01), beep, _gap(0.07), beep, _gap(0.07), beep])
+
+
+def warble() -> np.ndarray:
+    notes = [_pulse(960 if i % 2 == 0 else 720, 0.09, 0.2, harmonics=2) for i in range(8)]
+    return np.concatenate([_gap(0.01), *notes])
+
+
+def honk() -> np.ndarray:
+    note = _pulse(330, 0.22, 0.24, harmonics=5)
+    return np.concatenate([_gap(0.01), note, _gap(0.09), note])
+
+
+SOUNDS = {"chime": chime, "bell": bell, "knock": knock, "rising": rising, "low": low,
+          "buzz": buzz, "beeps": beeps, "warble": warble, "honk": honk}
 
 
 def sound_file(name: str, volume: str) -> str:
