@@ -153,6 +153,23 @@ def handle_key(key: int, open_settings: Callable[[], None]) -> bool:
     return True
 
 
+def _place_mac_window(width: int, height: int) -> bool:
+    """Give the viewer window the frame's size, centred on the main screen; True once it has it.
+
+    OpenCV's macOS window often opens as a bare title bar, half off screen, and its own
+    resize and move calls do not reliably fix that (moveWindow mixes up Retina coordinates)."""
+    import AppKit
+
+    for window in AppKit.NSApplication.sharedApplication().windows():
+        if window.title() == WINDOW_TITLE:
+            screen = AppKit.NSScreen.mainScreen().visibleFrame().size
+            scale = min(1.0, 0.9 * screen.width / width, 0.9 * screen.height / height)
+            window.setContentSize_((width * scale, height * scale))
+            window.center()
+            return True
+    return False
+
+
 def run_viewer(stream=None, open_settings: Callable[[], None] = lambda: None) -> int:
     """The viewer process: show frames from stdin until the window is closed or the app stops sending."""
     stream = stream or sys.stdin.buffer
@@ -165,8 +182,8 @@ def run_viewer(stream=None, open_settings: Callable[[], None] = lambda: None) ->
         ended.set()
 
     threading.Thread(target=reader, daemon=True).start()
-    shown = False
-    width = [0]
+    shown = placed = False
+    width, height = [0], [0]
 
     def on_mouse(event, x, y, _flags, _param) -> None:
         if event == cv2.EVENT_LBUTTONUP and button_hit(settings_button(width[0]), x, y):
@@ -176,13 +193,17 @@ def run_viewer(stream=None, open_settings: Callable[[], None] = lambda: None) ->
         if data:
             image = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_COLOR)
             if image is not None:
-                width[0] = image.shape[1]
-                cv2.imshow(WINDOW_TITLE, with_controls(image))
+                width[0], height[0] = image.shape[1], image.shape[0]
                 if not shown:
+                    cv2.namedWindow(WINDOW_TITLE, cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
+                    cv2.resizeWindow(WINDOW_TITLE, image.shape[1], image.shape[0])
                     cv2.setMouseCallback(WINDOW_TITLE, on_mouse)
+                cv2.imshow(WINDOW_TITLE, with_controls(image))
                 shown = True
         if not handle_key(cv2.waitKey(30), open_settings):
             break
+        if shown and not placed:
+            placed = _place_mac_window(width[0], height[0]) if sys.platform == "darwin" else True
         if shown and cv2.getWindowProperty(WINDOW_TITLE, cv2.WND_PROP_VISIBLE) < 1:
             break  # closed with the window's close button
     cv2.destroyAllWindows()
