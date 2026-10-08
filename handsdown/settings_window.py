@@ -19,7 +19,6 @@ RELEASE_CHOICES = {"2 seconds": 2.0, "3 seconds": 3.0, "5 seconds": 5.0, "10 sec
 ZONE_SLIDERS = ("zone_margin", "zone_above", "zone_below", "chin_cutout")
 SOUND_CHOICES = {"Chime": "chime", "Bell": "bell", "Soft knock": "knock", "Rising": "rising", "Low tone": "low",
                  "Buzz": "buzz", "Beeps": "beeps", "Warble": "warble", "Honk": "honk"}
-VOLUME_CHOICES = {"Quiet": "quiet", "Medium": "medium", "Normal": "normal"}
 
 
 def _closest(choices: dict, value: float) -> str:
@@ -34,7 +33,7 @@ def form_values(settings: Settings) -> dict:
     return {
         "chime": settings.chime,
         "sound": _label(SOUND_CHOICES, settings.sound),
-        "volume": _label(VOLUME_CHOICES, settings.volume),
+        "volume": settings.volume,
         "notification": settings.notification,
         "screen_border": settings.screen_border,
         "dwell_s": settings.dwell_s,
@@ -52,7 +51,7 @@ def settings_from_form(values: dict, base: Settings) -> Settings:
         base,
         chime=bool(values["chime"]),
         sound=SOUND_CHOICES[values["sound"]],
-        volume=VOLUME_CHOICES[values["volume"]],
+        volume=round(float(values["volume"])),
         notification=bool(values["notification"]),
         screen_border=bool(values["screen_border"]),
         dwell_s=round(float(values["dwell_s"]), 2),
@@ -110,7 +109,7 @@ def run_settings_window(path: Path | None = None) -> int:
 
     chime = tk.BooleanVar(value=values["chime"])
     sound = tk.StringVar(value=values["sound"])
-    volume = tk.StringVar(value=values["volume"])
+    volume = tk.DoubleVar(value=values["volume"])
     release = tk.StringVar(value=values["release"])
     pause_when_locked = tk.BooleanVar(value=values["pause_when_locked"])
     notification = tk.BooleanVar(value=values["notification"])
@@ -136,23 +135,26 @@ def run_settings_window(path: Path | None = None) -> int:
 
     add("Alert sound", ttk.Checkbutton(frame, variable=chime))
     add("Sound", ttk.Combobox(frame, textvariable=sound, state="readonly", values=list(SOUND_CHOICES), width=18))
-    add("Volume", ttk.Combobox(frame, textvariable=volume, state="readonly", values=list(VOLUME_CHOICES), width=18))
 
     def test_sound() -> None:
         try:
-            play_chime(SOUND_CHOICES[sound.get()], VOLUME_CHOICES[volume.get()])
+            play_chime(SOUND_CHOICES[sound.get()], round(volume.get()))
         except Exception:
             pass  # a missing audio device should not close the settings window
 
     ttk.Button(frame, text="Play", command=test_sound).grid(row=row - 1, column=2, sticky="w")
-    add("Notification", ttk.Checkbutton(frame, variable=notification))
-    add("Red border round the screen", ttk.Checkbutton(frame, variable=screen_border))
-    hint("From the alert until the hand moves away. Seen by others if you share your screen")
+
     def slider(label: str, variable: tk.DoubleVar, low: float, high: float, fmt: str) -> None:
         shown = ttk.Label(frame, text=fmt.format(variable.get()))
         add(label, ttk.Scale(frame, from_=low, to=high, variable=variable, length=180,
                              command=lambda _value: shown.config(text=fmt.format(variable.get()))))
         shown.grid(row=row - 1, column=2, sticky="w")
+
+    slider("Volume", volume, *LIMITS["volume"], "{:.0f}%")
+    hint("63% is as loud as the old Normal")
+    add("Notification", ttk.Checkbutton(frame, variable=notification))
+    add("Red border round the screen", ttk.Checkbutton(frame, variable=screen_border))
+    hint("From the alert until the hand moves away. Seen by others if you share your screen")
 
     slider("Wait before alerting", dwell, 0.2, 3.0, "{:.1f} s")
     add("Repeat the alert", ttk.Combobox(frame, textvariable=reminder, state="readonly",

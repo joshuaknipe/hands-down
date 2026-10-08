@@ -8,13 +8,13 @@ import sys
 import numpy as np
 
 from handsdown.chime import sound_file
-from handsdown.paths import log_dir, resource_path, settings_path
-from handsdown.settings import SOUNDS, VOLUMES
+from handsdown.paths import log_dir, resource_path, settings_path, sound_cache_dir
+from handsdown.settings import SOUNDS
 
 ASSETS = (
     "models/hand_landmarker.task",
     "models/face_landmarker.task",
-    *(sound_file(sound, volume) for sound in SOUNDS for volume in VOLUMES),
+    *(sound_file(sound) for sound in SOUNDS),
 )
 
 
@@ -27,7 +27,7 @@ def run_self_test() -> int:
 
         with Tracker() as tracker:
             tracker.process(np.zeros((480, 640, 3), np.uint8), 0)
-        for folder in (settings_path().parent, log_dir()):
+        for folder in (settings_path().parent, log_dir(), sound_cache_dir()):
             folder.mkdir(parents=True, exist_ok=True)
             probe = folder / ".selftest"
             probe.write_text("ok")

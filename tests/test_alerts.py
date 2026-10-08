@@ -7,7 +7,7 @@ import numpy as np
 from handsdown import alerts, chime
 from handsdown.alerts import Alerter
 from handsdown.paths import resource_path
-from handsdown.settings import SOUNDS, VOLUMES, Settings
+from handsdown.settings import SOUNDS, Settings
 
 
 def test_chime_is_short_soft_and_starts_silent():
@@ -37,30 +37,42 @@ def test_every_sound_is_short_soft_and_starts_silent():
         assert abs(samples[0]) < 0.01, name
 
 
-def test_volumes_get_louder_up_to_full():
-    gains = [chime.VOLUME_GAINS[v] for v in VOLUMES]
-    assert gains == sorted(gains) and gains[-1] == 1.0
+def test_full_volume_plays_every_sound_loud_but_unclipped():
+    assert abs(chime.gain(63) - 1.0) < 0.01
+    for name in SOUNDS:
+        assert 0.7 < np.abs(chime.SOUNDS[name]()).max() * chime.gain(100) <= 1.0, name
 
 
 def test_every_sound_file_is_committed():
     for name in SOUNDS:
-        for volume in VOLUMES:
-            assert resource_path(chime.sound_file(name, volume)).stat().st_size > 10_000
+        assert resource_path(chime.sound_file(name)).stat().st_size > 10_000
 
 
-def test_play_chime_on_mac_uses_afplay():
+def test_play_chime_on_mac_uses_afplay(tmp_path):
     calls = []
-    alerts.play_chime("bell", "quiet", platform="darwin", runner=calls.append)
-    assert calls == [["afplay", str(resource_path("assets/sounds/bell-quiet.wav"))]]
+    alerts.play_chime("bell", 50, platform="darwin", runner=calls.append, cache=tmp_path)
+    assert calls == [["afplay", str(alerts.volume_file("bell", 50, tmp_path))]]
 
 
-def test_play_chime_on_windows_plays_asynchronously(monkeypatch):
+def test_play_chime_on_windows_plays_asynchronously(monkeypatch, tmp_path):
     played = []
     fake = types.SimpleNamespace(SND_FILENAME=1, SND_ASYNC=2, SND_NODEFAULT=4,
                                  PlaySound=lambda path, flags: played.append((path, flags)))
     monkeypatch.setitem(sys.modules, "winsound", fake)
-    alerts.play_chime(platform="win32")
-    assert played == [(str(resource_path("assets/sounds/chime-normal.wav")), 7)]
+    alerts.play_chime(platform="win32", cache=tmp_path)
+    assert played == [(str(alerts.volume_file("chime", 63, tmp_path)), 7)]
+
+
+def test_volume_file_scales_the_sound_and_keeps_only_the_latest(tmp_path):
+    original = chime.read_wav(resource_path(chime.sound_file("knock")))
+    stored = alerts.volume_file("knock", 63, tmp_path)
+    assert np.allclose(chime.read_wav(stored), original, atol=2e-3)
+    half = alerts.volume_file("knock", 50, tmp_path)
+    assert np.allclose(chime.read_wav(half), original / 2, atol=1e-3)  # 50% is half the amplitude of 63%
+    loud = alerts.volume_file("knock", 100, tmp_path)
+    assert np.allclose(chime.read_wav(loud), original * 4, atol=1e-3)
+    assert list(tmp_path.glob("*.wav")) == [loud]
+    assert alerts.volume_file("knock", 100, tmp_path) == loud
 
 
 def test_mac_notify_is_discreet():

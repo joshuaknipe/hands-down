@@ -3,7 +3,7 @@
 import sys
 from pathlib import Path
 
-from platformdirs import user_config_path, user_log_path
+from platformdirs import user_cache_path, user_config_path, user_log_path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
@@ -43,3 +43,8 @@ def settings_path() -> Path:
 
 def log_dir() -> Path:
     return user_log_path(APP_NAME, appauthor=False)
+
+
+def sound_cache_dir() -> Path:
+    """The alert sound at the chosen volume. Safe to delete: it is rebuilt when needed."""
+    return user_cache_path(APP_NAME, appauthor=False) / "sounds"

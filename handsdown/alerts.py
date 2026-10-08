@@ -2,19 +2,42 @@
 
 import subprocess
 import sys
+import zlib
+from pathlib import Path
 from typing import Callable
 
-from handsdown.chime import sound_file
-from handsdown.paths import resource_path
+from handsdown.chime import gain, read_wav, sound_file, write_wav
+from handsdown.paths import resource_path, sound_cache_dir
 from handsdown.settings import Settings
 
 NOTIFICATION_TITLE = "Hands Down"
 NOTIFICATION_TEXT = "Gentle reminder"
 
 
-def play_chime(sound: str = "chime", volume: str = "normal", platform: str = sys.platform,
-               runner=subprocess.Popen) -> None:
-    path = str(resource_path(sound_file(sound, volume)))
+def volume_file(sound: str, volume: int, cache: Path) -> Path:
+    """The sound at this volume, written once to the cache folder; other cached volumes are removed.
+
+    A file, not a volume flag, because winsound cannot set the volume of what it plays."""
+    source = resource_path(sound_file(sound))
+    stamp = zlib.crc32(source.read_bytes())  # a new version of the sound gets a new file
+    path = cache / f"{sound}-{round(gain(volume) * 1000)}-{stamp:08x}.wav"
+    if not path.is_file():
+        cache.mkdir(parents=True, exist_ok=True)
+        temp = path.with_suffix(".tmp")
+        write_wav(temp, read_wav(source) * gain(volume))
+        temp.replace(path)
+        for old in cache.glob("*.wav"):
+            if old != path:
+                try:
+                    old.unlink()
+                except OSError:
+                    pass  # still playing on Windows: removed next time
+    return path
+
+
+def play_chime(sound: str = "chime", volume: int = 63, platform: str = sys.platform,
+               runner=subprocess.Popen, cache: Path | None = None) -> None:
+    path = str(volume_file(sound, volume, cache or sound_cache_dir()))
     if platform == "win32":
         import winsound
 

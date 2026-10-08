@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Callable
 
 SOUNDS = ("chime", "bell", "knock", "rising", "low", "buzz", "beeps", "warble", "honk")
-VOLUMES = ("quiet", "medium", "normal")
+LEGACY_VOLUMES = {"quiet": 44, "medium": 55, "normal": 63}  # the old three-step setting, in percent
 
 
 @dataclass(frozen=True)
@@ -25,7 +25,7 @@ class Settings:
     chin_cutout: float = 1.0  # size of the ignored mouth and chin area; 0 is off
     chime: bool = True
     sound: str = "chime"  # one of SOUNDS
-    volume: str = "normal"  # one of VOLUMES
+    volume: int = 63  # percent, on a loudness curve (see chime.gain); 63 is the sounds as stored
     notification: bool = False
     screen_border: bool = False  # a red border round the screen from the alert until the hand moves away
     start_with_windows: bool = False
@@ -43,9 +43,10 @@ LIMITS = {
     "zone_below": (0.0, 2.0),
     "chin_cutout": (0.0, 2.0),
     "camera_index": (0, 9),
+    "volume": (20, 100),
 }
 
-CHOICES = {"sound": SOUNDS, "volume": VOLUMES}
+CHOICES = {"sound": SOUNDS}
 
 
 def clamp(settings: Settings) -> Settings:
@@ -78,6 +79,8 @@ def load_settings(path: Path, warn: Callable[[str], None] = print) -> Settings:
     if not isinstance(data, dict):
         warn("Settings file is not a JSON object, using defaults")
         return Settings()
+    if isinstance(data.get("volume"), str):
+        data["volume"] = LEGACY_VOLUMES.get(data["volume"], Settings().volume)
     defaults = Settings()
     values = {}
     for f in fields(Settings):

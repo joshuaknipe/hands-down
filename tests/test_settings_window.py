@@ -3,8 +3,8 @@ import sys
 import pytest
 
 from handsdown import startup
-from handsdown.settings import LIMITS, SOUNDS, VOLUMES, Settings, load_settings
-from handsdown.settings_window import (RELEASE_CHOICES, REMINDER_CHOICES, SOUND_CHOICES, VOLUME_CHOICES, AutoSaver,
+from handsdown.settings import LIMITS, SOUNDS, Settings, load_settings
+from handsdown.settings_window import (RELEASE_CHOICES, REMINDER_CHOICES, SOUND_CHOICES, AutoSaver,
                                        form_values, settings_from_form)
 
 
@@ -38,20 +38,19 @@ def test_every_choice_is_within_limits():
     low, high = LIMITS["release_s"]
     assert all(low <= v <= high for v in RELEASE_CHOICES.values())
     assert list(SOUND_CHOICES.values()) == list(SOUNDS)
-    assert list(VOLUME_CHOICES.values()) == list(VOLUMES)
 
 
 def test_form_shows_sound_volume_release_and_lock():
-    values = form_values(Settings(sound="knock", volume="quiet", release_s=10.0, pause_when_locked=False))
-    assert values["sound"] == "Soft knock" and values["volume"] == "Quiet"
+    values = form_values(Settings(sound="knock", volume=40, release_s=10.0, pause_when_locked=False))
+    assert values["sound"] == "Soft knock" and values["volume"] == 40
     assert values["release"] == "10 seconds" and values["pause_when_locked"] is False
 
 
 def test_form_round_trip_of_the_new_choices():
-    values = form_values(Settings()) | {"sound": "Bell", "volume": "Medium", "release": "5 seconds",
+    values = form_values(Settings()) | {"sound": "Bell", "volume": 62.7, "release": "5 seconds",
                                         "pause_when_locked": False}
     result = settings_from_form(values, Settings())
-    assert (result.sound, result.volume, result.release_s, result.pause_when_locked) == ("bell", "medium", 5.0, False)
+    assert (result.sound, result.volume, result.release_s, result.pause_when_locked) == ("bell", 63, 5.0, False)
 
 
 class FakeKey:

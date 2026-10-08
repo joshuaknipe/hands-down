@@ -55,18 +55,26 @@ def test_store_reloads_when_the_file_changes(tmp_path):
 
 def test_sound_choices_survive_a_round_trip(tmp_path):
     path = tmp_path / "settings.json"
-    custom = Settings(sound="bell", volume="quiet", pause_when_locked=False)
+    custom = Settings(sound="bell", volume=60, pause_when_locked=False)
     save_settings(path, custom)
     assert load_settings(path) == custom
 
 
 def test_unknown_sound_or_volume_falls_back_to_the_default(tmp_path):
     path = tmp_path / "settings.json"
-    path.write_text(json.dumps({"sound": "air horn", "volume": 11, "pause_when_locked": "no"}))
+    path.write_text(json.dumps({"sound": "air horn", "volume": "loud", "pause_when_locked": "no"}))
     loaded = load_settings(path)
     assert loaded.sound == Settings().sound and loaded.volume == Settings().volume
     assert loaded.pause_when_locked is True
-    assert clamp(Settings(sound="nope", volume="loud")) == Settings()
+    assert clamp(Settings(sound="nope")) == Settings()
+    assert clamp(Settings(volume=500)).volume == 100
+
+
+def test_the_old_volume_steps_carry_over_as_percentages(tmp_path):
+    path = tmp_path / "settings.json"
+    for old, percent in (("quiet", 44), ("medium", 55), ("normal", 63)):
+        path.write_text(json.dumps({"volume": old}))
+        assert load_settings(path).volume == percent
 
 
 def test_zone_shape_settings_are_clamped():

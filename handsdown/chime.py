@@ -6,10 +6,9 @@ from pathlib import Path
 import numpy as np
 
 from handsdown.settings import SOUNDS as SOUND_NAMES
-from handsdown.settings import VOLUMES
 
 RATE = 44100
-VOLUME_GAINS = {"quiet": 0.35, "medium": 0.65, "normal": 1.0}
+FULL_GAIN = 4.0  # 100% volume plays the stored files this much louder, just short of clipping
 
 
 def _tone(freq: float, seconds: float, volume: float, decay: float = 6.0) -> np.ndarray:
@@ -80,9 +79,20 @@ SOUNDS = {"chime": chime, "bell": bell, "knock": knock, "rising": rising, "low":
           "buzz": buzz, "beeps": beeps, "warble": warble, "honk": honk}
 
 
-def sound_file(name: str, volume: str) -> str:
+def sound_file(name: str) -> str:
     """The sound's path relative to the resource root."""
-    return f"assets/sounds/{name}-{volume}.wav"
+    return f"assets/sounds/{name}.wav"
+
+
+def gain(volume: int) -> float:
+    """How much to scale a stored sound for a volume setting in percent. Cubed so the slider follows
+    how loud it sounds, as system volume controls do; 63% plays the files as stored."""
+    return (volume / 100) ** 3 * FULL_GAIN
+
+
+def read_wav(path: Path) -> np.ndarray:
+    with wave.open(str(path)) as w:
+        return np.frombuffer(w.readframes(w.getnframes()), "<i2") / 32767
 
 
 def write_wav(path: Path, samples: np.ndarray) -> None:
@@ -98,6 +108,5 @@ if __name__ == "__main__":
     root = Path(__file__).resolve().parent.parent
     (root / "assets" / "sounds").mkdir(parents=True, exist_ok=True)
     for name in SOUND_NAMES:
-        for volume in VOLUMES:
-            write_wav(root / sound_file(name, volume), SOUNDS[name]() * VOLUME_GAINS[volume])
-    print(f"Wrote {len(SOUND_NAMES) * len(VOLUMES)} sounds to {root / 'assets' / 'sounds'}")
+        write_wav(root / sound_file(name), SOUNDS[name]())
+    print(f"Wrote {len(SOUND_NAMES)} sounds to {root / 'assets' / 'sounds'}")
