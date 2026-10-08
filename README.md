@@ -139,10 +139,11 @@ makes `dist/HandsDown.app`.
 - `handsdown/`: the app. Detection (`zone.py`, `episodes.py`) is pure Python and tested without a camera.
 - `feasibility/`: developer tools, including `evaluate`, which runs the detector over recorded clips.
 - `models/`: the MediaPipe hand and face models, committed so builds need no network.
-- Pushes to GitHub run the tests on Windows and macOS, build the Windows app with `install.ps1`
-  (twice, to check updating too) and the Mac app bundle, and keep both zips as artifacts in the
-  Actions tab.
-- To publish a release, tag a version and push the tag; CI attaches both zips:
+- Pushes to `main` and pull requests run the tests on Windows and macOS.
+- To try the builds without releasing, press **Run workflow** on the tests workflow in the
+  Actions tab. It builds the Windows app with `install.ps1` (twice, to check updating too) and
+  the Mac app bundle, and keeps both zips as artifacts there.
+- To publish a release, tag a version and push the tag; CI builds both apps and attaches the zips:
 
   ```bash
   git tag v0.1.0
