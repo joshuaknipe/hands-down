@@ -1,5 +1,7 @@
 # Hands Down
 
+<img width="719" height="464" alt="Screenshot 2026-10-14 at 14 56 51" src="https://github.com/user-attachments/assets/99069d4e-1523-412b-be6c-5d219454f6d3" />
+
 A free desktop app that gives you a gentle reminder when your hand stays near your head or hair while you're using your computer.
 
 Made with trichotillomania in mind, Hands Down runs quietly while you work, study, or use other apps. You can choose a sound, a colored screen border, your own reminder message, or screen blur. Everything runs on your computer, and you can adjust the reminders to suit you.
