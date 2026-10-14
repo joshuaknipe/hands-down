@@ -26,14 +26,14 @@ def test_menu_when_watching():
     items = menu_items("watching", paused=False)
     assert items[0].label == STATE_LABELS["watching"] and not items[0].enabled
     actions = [i.action for i in items[1:]]
-    assert actions == ["pause_call", "pause_15", "pause_60", "false_alert", "show_camera", "summary", "settings",
+    assert actions == ["pause_15", "pause_60", "pause_call", "false_alert", "show_camera", "summary", "settings",
                        "open_log", "quit"]
 
 
 def test_menu_when_paused_offers_resume_first():
     items = menu_items("paused", paused=True)
-    assert [i.action for i in items[1:3]] == ["resume", "false_alert"]
-    assert "pause_call" not in [i.action for i in items]
+    assert [i.action for i in items[1:3]] == ["resume", "pause_call"]
+    assert "pause_call" in [i.action for i in items]
 
 
 def test_settings_command_runs_this_module_from_source():
@@ -88,3 +88,12 @@ def test_menu_bar_position_chosen_by_the_user_is_kept():
     defaults = FakeDefaults({MENU_BAR_POSITION_KEY: 812.0})
     place_menu_bar_icon(defaults)
     assert defaults.values[MENU_BAR_POSITION_KEY] == 812.0
+
+
+def test_pause_for_calls_is_a_checked_preference_even_when_manually_paused():
+    items = menu_items("paused", paused=True, pause_for_calls=True)
+    call = next(i for i in items if i.action == "pause_call")
+    assert call.checked and call.label == "Pause for calls (automatic)"
+    items = menu_items("paused_call", paused=False, pause_for_calls=False)
+    assert not next(i for i in items if i.action == "pause_call").checked
+    assert not any(i.action == "resume" for i in items)

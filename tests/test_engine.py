@@ -265,3 +265,49 @@ def test_a_failing_frame_sink_is_dropped_and_the_engine_keeps_going(tmp_path):
     assert h.alerts == ["alert"] and h.engine.frame_sink is None
     errors = [r for r in h.log.read() if r["kind"] == "error"]
     assert len(errors) == 1 and "viewer exploded" in errors[0]["message"]
+
+
+def test_camera_usage_pauses_releases_and_resumes_automatically(tmp_path):
+    from handsdown.engine import CALL_RESUME_DELAY_S
+    h = Harness(tmp_path, settings=Settings(pause_for_calls=True))
+    busy = [False]
+    h.engine._camera_usage = lambda index: busy[0]
+    h.world["observation"] = Observation(0, (TEMPLE,), True, FACE)
+    h.run(1)
+    busy[0] = True
+    h.run(1)
+    assert h.opened[0].released and h.states[-1] == "paused_call"
+    assert len(h.alerts) == 1 and not h.engine.paused
+    busy[0] = False
+    h.run(CALL_RESUME_DELAY_S / 2)
+    assert len(h.opened) == 1
+    h.run(CALL_RESUME_DELAY_S + .5)
+    assert len(h.opened) == 2 and h.states[-1] == "watching"
+    assert len([r for r in h.log.read() if r["kind"] == "pause" and r.get("reason") == "camera in use"]) == 1
+
+
+def test_call_pause_can_be_disabled_and_does_not_override_manual_pause(tmp_path):
+    from dataclasses import replace
+    h = Harness(tmp_path, settings=Settings(pause_for_calls=True))
+    busy = [True]
+    h.engine._camera_usage = lambda index: busy[0]
+    h.run(.5)
+    assert not h.opened and h.states[-1] == "paused_call"
+    h.engine.pause(None, "manual")
+    busy[0] = False
+    h.run(10)
+    assert not h.opened and h.engine.paused
+    h.settings = replace(h.settings, pause_for_calls=False)
+    h.engine.resume()
+    h.run(.5)
+    assert len(h.opened) == 1 and h.states[-1] == "watching"
+
+
+def test_unknown_camera_usage_keeps_an_automatic_pause_until_known_free(tmp_path):
+    h = Harness(tmp_path, settings=Settings(pause_for_calls=True))
+    busy = [True]
+    h.engine._camera_usage = lambda index: busy[0]
+    h.run(.5)
+    busy[0] = None
+    h.run(5)
+    assert not h.opened and h.states[-1] == "paused_call"

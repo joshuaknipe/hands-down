@@ -49,6 +49,7 @@ def form_values(settings: Settings) -> dict:
         "release": _closest(RELEASE_CHOICES, settings.release_s),
         **{name: getattr(settings, name) for name in ZONE_SLIDERS},
         "pause_when_locked": settings.pause_when_locked,
+        "pause_for_calls": settings.pause_for_calls,
         "start_with_windows": settings.start_with_windows,
         "camera_index": settings.camera_index,
     }
@@ -80,6 +81,7 @@ def settings_from_form(values: dict, base: Settings) -> Settings:
         release_s=RELEASE_CHOICES[values["release"]],
         **{name: round(float(values[name]), 2) for name in ZONE_SLIDERS},
         pause_when_locked=bool(values["pause_when_locked"]),
+        pause_for_calls=bool(values["pause_for_calls"]),
         start_with_windows=bool(values["start_with_windows"]),
         camera_index=int(values["camera_index"]),
     ))
@@ -94,6 +96,7 @@ class AutoSaver:
         self._save = save
         self._set_startup = set_startup
         self._last = base
+        self._form_call_pause = base.pause_for_calls
         self._startup_requested = base.start_with_windows
         self._startup_state = base.start_with_windows
 
@@ -103,6 +106,9 @@ class AutoSaver:
 
     def update(self, values: dict) -> Settings:
         new = settings_from_form(values, self._last)
+        if new.pause_for_calls == self._form_call_pause and self._path.is_file():
+            new = replace(new, pause_for_calls=load_settings(self._path).pause_for_calls)
+        self._form_call_pause = bool(values["pause_for_calls"])
         if new.start_with_windows != self._startup_requested:  # only touch the registry when the box changes
             self._startup_requested = new.start_with_windows
             self._startup_state = (self._set_startup(new.start_with_windows) if self._set_startup
@@ -154,6 +160,7 @@ def run_settings_window(path: Path | None = None) -> int:
     sound = tk.StringVar(value=values["sound"])
     volume = tk.DoubleVar(value=values["volume"])
     release = tk.StringVar(value=values["release"])
+    pause_for_calls = tk.BooleanVar(value=values["pause_for_calls"])
     pause_when_locked = tk.BooleanVar(value=values["pause_when_locked"])
     notification = tk.BooleanVar(value=values["notification"])
     screen_border = tk.BooleanVar(value=values["screen_border"])
@@ -255,6 +262,9 @@ def run_settings_window(path: Path | None = None) -> int:
     slider("Zone below the chin", zone["zone_below"], *LIMITS["zone_below"], "{:.2f} face heights")
     slider("Ignored chin area", zone["chin_cutout"], *LIMITS["chin_cutout"], "{:.1f}x")
     hint("Set to 0 to count the chin and mouth too")
+    add("Pause for calls", ttk.Checkbutton(frame, variable=pause_for_calls))
+    hint("Automatically release the camera while another app uses it; resume when free")
+    hint("Uses OS camera activity; camera-off calls do not trigger a pause")
     add("Pause while the screen is locked", ttk.Checkbutton(frame, variable=pause_when_locked))
     if startup.startup_label():
         add(startup.startup_label(), ttk.Checkbutton(frame, variable=start))
@@ -292,6 +302,7 @@ def run_settings_window(path: Path | None = None) -> int:
                 "notification": notification.get(), "screen_border": screen_border.get(), "dwell_s": dwell.get(),
                 **{name: variable.get() for name, variable in screen.items()},
                 "reminder": reminder.get(),
+                "pause_for_calls": pause_for_calls.get(),
                 "release": release.get(), "pause_when_locked": pause_when_locked.get(),
                 **{name: variable.get() for name, variable in zone.items()},
                 "start_with_windows": start.get(),
@@ -308,7 +319,7 @@ def run_settings_window(path: Path | None = None) -> int:
         pending[0] = root.after(300, save_now)  # wait until a slider drag settles
 
     for variable in (chime, sound, volume, notification, screen_border, dwell, reminder, release, pause_when_locked,
-                     start, camera, *zone.values(), *screen.values()):
+                     start, camera, pause_for_calls, *zone.values(), *screen.values()):
         variable.trace_add("write", changed)
 
     def close() -> None:
@@ -319,6 +330,16 @@ def run_settings_window(path: Path | None = None) -> int:
             root.after_cancel(pending[0])
             save_now()
         root.destroy()
+
+    def refresh_call_preference() -> None:
+        # The tray can change this same preference while Settings is open.
+        if pending[0] is None:
+            current = load_settings(path).pause_for_calls
+            if pause_for_calls.get() != current:
+                pause_for_calls.set(current)
+        root.after(500, refresh_call_preference)
+
+    root.after(500, refresh_call_preference)
 
     hint_row = 1
     ttk.Label(outer, text="Changes are saved as you make them", foreground="grey").grid(

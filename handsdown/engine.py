@@ -10,6 +10,7 @@ import time
 from datetime import datetime
 from typing import Callable
 
+from handsdown.camera_usage import CameraUsageMonitor
 from handsdown.episodes import EpisodeTracker, Event, Timing
 from handsdown.eventlog import EventLog
 from handsdown.landmarks import Tracker
@@ -22,12 +23,13 @@ NOT_TRACKING_AFTER_S = 2.0  # no face for this long shows "not tracking"
 RETRY_CAMERA_S = 10.0  # how often to retry a busy or missing camera
 MAX_FAILED_READS = 10  # failed reads in a row before the camera counts as taken
 PAUSED_CHECK_S = 0.5
+CALL_RESUME_DELAY_S = 2.0  # avoid camera toggling through brief gaps in a call
 
 
 class Engine:
     def __init__(self, settings: Callable[[], Settings], log: EventLog, alert: Callable[[str], None],
                  on_state: Callable[[str], None], open_capture: Callable[[int], object],
-                 tracker_factory=Tracker, clock=time.monotonic, wall=datetime.now, is_locked=is_screen_locked):
+                 tracker_factory=Tracker, clock=time.monotonic, wall=datetime.now, is_locked=is_screen_locked, camera_usage=None):
         self._settings = settings
         self._log = log
         self._alert = alert
@@ -38,6 +40,10 @@ class Engine:
         self._wall = wall
         self._is_locked = is_locked
         self._locked = False
+        self._camera_usage = camera_usage or CameraUsageMonitor(clock=clock,
+            warn=lambda message: log.write("error", message=message))
+        self._camera_paused = False
+        self._camera_free_since = None
         self._lock = threading.Lock()
         self._stop = threading.Event()
         self._pause_until: float | None = None  # clock time to resume at; math.inf until resumed
@@ -88,6 +94,9 @@ class Engine:
                 self._stop.wait(self.tick())
         finally:
             self._release(self._now())
+            close = getattr(self._camera_usage, "close", None)
+            if close is not None:
+                close()
             self._log.write("stop")
 
     def tick(self) -> float:
@@ -100,6 +109,10 @@ class Engine:
         if self._screen_locked(settings):
             self._release(now)
             self._set_state("paused")
+            return PAUSED_CHECK_S
+        if self._call_paused(settings, now):
+            self._release(now)
+            self._set_state("paused_call")
             return PAUSED_CHECK_S
         if self._capture is None:
             self._capture = self._open_capture(settings.camera_index)
@@ -144,6 +157,34 @@ class Engine:
             else:
                 self._log.write("resume")
         return locked
+
+    def _call_paused(self, settings: Settings, now: float) -> bool:
+        was_paused = self._camera_paused
+        if not settings.pause_for_calls:
+            self._camera_paused = False
+            self._camera_free_since = None
+        else:
+            setter = getattr(self._camera_usage, "set_capture_active", None)
+            if setter is not None:
+                setter(self._capture is not None)
+            busy = self._camera_usage(settings.camera_index)
+            if busy is True:
+                self._camera_paused = True
+                self._camera_free_since = None
+            elif busy is False and self._camera_paused:
+                if self._camera_free_since is None:
+                    self._camera_free_since = now
+                if now - self._camera_free_since >= CALL_RESUME_DELAY_S:
+                    self._camera_paused = False
+                    self._camera_free_since = None
+            elif busy is None:
+                self._camera_free_since = None
+        if self._camera_paused != was_paused:
+            if self._camera_paused:
+                self._log.write("pause", reason="camera in use", minutes=None)
+            else:
+                self._log.write("resume", reason="camera free" if settings.pause_for_calls else "call pause disabled")
+        return self._camera_paused
 
     def _process(self, frame, now: float, settings: Settings) -> None:
         if self._tracker is None:

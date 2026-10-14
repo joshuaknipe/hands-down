@@ -46,6 +46,7 @@ class Settings:
     blur_level: int = 15  # Gaussian blur radius, in screen points/pixels
     start_with_windows: bool = False
     camera_index: int = 0
+    pause_for_calls: bool = False  # automatically yield to another camera app, then resume
     pause_when_locked: bool = True  # release the camera while the screen is locked
 
 

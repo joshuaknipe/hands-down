@@ -86,8 +86,16 @@ The script quits the running copy and replaces it.
 
 Click the ring for the menu:
 
-- **Pause for call**, **Pause 15 minutes**, **Pause 1 hour**: releases the camera, for example
-  before a Teams or Zoom call. **Resume** turns it back on.
+- **Pause for calls (automatic)**: a saved on/off preference, also available in Settings.
+  When enabled, Hands Down releases the camera and stops alerts while another app is
+  reported as using a camera, then resumes after the camera has been free for two seconds.
+  This uses OS camera activity rather than Teams presence; calls with the camera off
+  do not trigger it. Camera activity reporting depends on the OS and driver. On macOS and Windows,
+  another app using any camera can trigger a pause. macOS tracks camera stream clients
+  through the local camera-service event log, including shared-camera use; it does not
+  read or record camera images for this check.
+- **Pause 15 minutes**, **Pause 1 hour**: manually releases the camera for that duration.
+  **Resume** ends a manual pause early. Automatic call pausing never cancels a manual pause.
 - **That wasn't me**: marks the last alert as a false alarm.
 - **Show camera**: a live view with the detection zone drawn on it. Useful while adjusting
   settings. Press **S** or click **Settings** in the view to open settings beside it.
@@ -111,7 +119,8 @@ Click the ring for the menu:
 - **Quit**.
 
 The ring's colour shows the state: teal is watching, amber means it cannot see your face,
-red means another app is using the camera, grey is paused.
+red means the camera is unavailable, grey is paused. The menu distinguishes a manual pause
+from **Paused — camera used by another app**.
 
 ## Run from source (Windows or macOS)
 

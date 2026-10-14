@@ -10,6 +10,7 @@ STATE_COLOURS = {
     "not_tracking": (214, 176, 92),
     "camera_busy": (205, 110, 92),
     "paused": (150, 150, 150),
+    "paused_call": (150, 150, 150),
 }
 
 STATE_LABELS = {
@@ -18,6 +19,7 @@ STATE_LABELS = {
     "not_tracking": "Can't see you",
     "camera_busy": "Camera in use by another app",
     "paused": "Paused",
+    "paused_call": "Paused — camera used by another app",
 }
 
 
@@ -35,19 +37,20 @@ class MenuItem:
     label: str
     action: str | None
     enabled: bool = True
+    checked: bool | None = None
 
 
-def menu_items(state: str | None, paused: bool, camera_open: bool = False) -> list[MenuItem]:
+def menu_items(state: str | None, paused: bool, camera_open: bool = False, pause_for_calls: bool = False) -> list[MenuItem]:
     items = [MenuItem(STATE_LABELS.get(state, STATE_LABELS[None]), None, enabled=False)]
     if paused:
         items.append(MenuItem("Resume", "resume"))
     else:
         items += [
-            MenuItem("Pause for call", "pause_call"),
             MenuItem("Pause 15 minutes", "pause_15"),
             MenuItem("Pause 1 hour", "pause_60"),
         ]
     items += [
+        MenuItem("Pause for calls (automatic)", "pause_call", checked=pause_for_calls),
         MenuItem("That wasn't me", "false_alert"),
         MenuItem("Hide camera", "hide_camera") if camera_open else MenuItem("Show camera", "show_camera"),
         MenuItem("Summary", "summary"),

@@ -4,6 +4,7 @@ import os
 import subprocess
 import sys
 import threading
+from dataclasses import replace
 
 import pystray
 
@@ -15,11 +16,11 @@ from handsdown.engine import Engine
 from handsdown.eventlog import EventLog
 from handsdown.paths import log_dir, settings_path
 from handsdown.preview import CameraView, annotate, encode
-from handsdown.settings import SettingsStore
+from handsdown.settings import SettingsStore, save_settings
 from handsdown.single import acquire
 from handsdown.tray import STATE_LABELS, draw_icon, menu_items, place_menu_bar_icon
 
-PAUSES = {"pause_call": (None, "call"), "pause_15": (15 * 60, "15 min"), "pause_60": (60 * 60, "1 hour")}
+PAUSES = {"pause_15": (15 * 60, "15 min"), "pause_60": (60 * 60, "1 hour")}
 
 
 def open_folder(folder) -> None:
@@ -91,6 +92,9 @@ def run_app() -> int:
         if action in PAUSES:
             seconds, reason = PAUSES[action]
             engine.pause(seconds, reason)
+        elif action == "pause_call":
+            settings = store.get()
+            save_settings(settings_path(), replace(settings, pause_for_calls=not settings.pause_for_calls))
         elif action == "resume":
             engine.resume()
         elif action == "false_alert":
@@ -112,9 +116,10 @@ def run_app() -> int:
         icon.update_menu()
 
     def item(entry):
-        return pystray.MenuItem(entry.label, lambda: act(entry.action), enabled=entry.enabled)
+        return pystray.MenuItem(entry.label, lambda: act(entry.action), enabled=entry.enabled,
+                                checked=(lambda _item: entry.checked) if entry.checked is not None else None)
 
-    icon.menu = pystray.Menu(lambda: (item(entry) for entry in menu_items(engine.state, engine.paused, view.is_open)))
+    icon.menu = pystray.Menu(lambda: (item(entry) for entry in menu_items(engine.state, engine.paused, view.is_open, store.get().pause_for_calls)))
 
     engine_thread = threading.Thread(target=engine.run, name="engine", daemon=True)
 

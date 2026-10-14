@@ -255,3 +255,27 @@ def test_text_style_form_and_preview_forward_all_options(tmp_path):
     config = json.loads(processes[0].stdin.getvalue().decode().splitlines()[0].removeprefix("configure "))
     assert config["text_position"] == "top-left" and config["text_size"] == 64
     assert config["text_background"] is False and config["border_width"] == 450
+
+
+def test_pause_for_calls_is_saved_from_the_form(tmp_path):
+    path = tmp_path / "settings.json"
+    saver = AutoSaver(path, Settings())
+    result = saver.update(form_values(Settings()) | {"pause_for_calls": True})
+    assert result.pause_for_calls and load_settings(path).pause_for_calls
+
+
+def test_settings_preserves_a_tray_call_toggle_when_an_unrelated_control_changes(tmp_path):
+    from handsdown.settings import save_settings
+    path = tmp_path / "settings.json"
+    original = Settings()
+    save_settings(path, original)
+    saver = AutoSaver(path, original)
+    save_settings(path, Settings(pause_for_calls=True))  # tray changed it while the form was open
+    saver.update(form_values(original) | {"volume": 80})
+    assert load_settings(path).pause_for_calls and load_settings(path).volume == 80
+    saver.update(form_values(original) | {"volume": 85})
+    assert load_settings(path).pause_for_calls
+    # Once the form observes the new value, an explicit checkbox change still wins.
+    saver.update(form_values(load_settings(path)))
+    saver.update(form_values(load_settings(path)) | {"pause_for_calls": False})
+    assert not load_settings(path).pause_for_calls
