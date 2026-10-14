@@ -83,3 +83,32 @@ def test_zone_shape_settings_are_clamped():
     assert loaded.zone_below == LIMITS["zone_below"][1]
     assert loaded.chin_cutout == LIMITS["chin_cutout"][1]
     assert LIMITS["chin_cutout"][0] == 0.0  # off is allowed
+
+
+def test_screen_effects_round_trip_and_invalid_values(tmp_path):
+    path = tmp_path / "settings.json"
+    custom = Settings(border_color="#12abef", border_width=20, screen_text=True,
+                      custom_text="Hands away — breathe", screen_blur=True, blur_level=35)
+    save_settings(path, custom)
+    assert load_settings(path) == custom
+    path.write_text(json.dumps({"border_color": "invalid", "border_width": -5, "blur_level": 999}))
+    result = load_settings(path)
+    assert result.border_color == Settings().border_color
+    assert result.border_width == 1 and result.blur_level == 50
+
+
+def test_large_border_and_text_styles_persist_and_validate(tmp_path):
+    custom = Settings(border_width=450, text_size=72, text_color="#abcdef", text_background=True,
+                      text_background_color="#223344", text_padding_x=80, text_padding_y=40,
+                      text_position="bottom-right")
+    path = tmp_path / "settings.json"
+    save_settings(path, custom)
+    assert load_settings(path) == custom
+    result = clamp(Settings(border_width=900, text_size=999, text_color="bad",
+                            text_background_color="bad", text_padding_x=-1, text_padding_y=900,
+                            text_position="nowhere"))
+    assert result.border_width == 500 and result.text_size == 160
+    assert result.text_color == Settings().text_color
+    assert result.text_background_color == Settings().text_background_color
+    assert result.text_padding_x == 0 and result.text_padding_y == 200
+    assert result.text_position == "center"

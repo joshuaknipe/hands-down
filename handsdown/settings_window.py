@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import Callable
 
 from handsdown import startup
+from handsdown.border import Border, EFFECT_FIELDS
+from handsdown.commands import border_command
 from handsdown.alerts import play_chime
 from handsdown.paths import settings_path
 from handsdown.settings import LIMITS, Settings, clamp, load_settings, save_settings
@@ -16,6 +18,10 @@ REMINDER_CHOICES = {
     "Every 15 seconds": 15.0, "Every 30 seconds": 30.0, "Every minute": 60.0,
 }
 RELEASE_CHOICES = {"2 seconds": 2.0, "3 seconds": 3.0, "5 seconds": 5.0, "10 seconds": 10.0, "30 seconds": 30.0}
+SCREEN_FIELDS = EFFECT_FIELDS[1:]
+TEXT_POSITION_CHOICES = {"Top left": "top-left", "Top center": "top-center", "Top right": "top-right",
+                         "Middle left": "middle-left", "Center": "center", "Middle right": "middle-right",
+                         "Bottom left": "bottom-left", "Bottom center": "bottom-center", "Bottom right": "bottom-right"}
 ZONE_SLIDERS = ("zone_margin", "zone_above", "zone_below", "chin_cutout")
 SOUND_CHOICES = {"Chime": "chime", "Bell": "bell", "Soft knock": "knock", "Rising": "rising", "Low tone": "low",
                  "Buzz": "buzz", "Beeps": "beeps", "Warble": "warble", "Honk": "honk"}
@@ -36,6 +42,8 @@ def form_values(settings: Settings) -> dict:
         "volume": settings.volume,
         "notification": settings.notification,
         "screen_border": settings.screen_border,
+        **{name: getattr(settings, name) for name in SCREEN_FIELDS},
+        "text_position": _label(TEXT_POSITION_CHOICES, settings.text_position),
         "dwell_s": settings.dwell_s,
         "reminder": _closest(REMINDER_CHOICES, settings.reminder_s),
         "release": _closest(RELEASE_CHOICES, settings.release_s),
@@ -54,6 +62,19 @@ def settings_from_form(values: dict, base: Settings) -> Settings:
         volume=round(float(values["volume"])),
         notification=bool(values["notification"]),
         screen_border=bool(values["screen_border"]),
+        border_color=values["border_color"],
+        border_width=round(float(values["border_width"])),
+        screen_text=bool(values["screen_text"]),
+        custom_text=values["custom_text"],
+        text_size=round(float(values["text_size"])),
+        text_color=values["text_color"],
+        text_background=bool(values["text_background"]),
+        text_background_color=values["text_background_color"],
+        text_padding_x=round(float(values["text_padding_x"])),
+        text_padding_y=round(float(values["text_padding_y"])),
+        text_position=TEXT_POSITION_CHOICES[values["text_position"]],
+        screen_blur=bool(values["screen_blur"]),
+        blur_level=round(float(values["blur_level"])),
         dwell_s=round(float(values["dwell_s"]), 2),
         reminder_s=REMINDER_CHOICES[values["reminder"]],
         release_s=RELEASE_CHOICES[values["release"]],
@@ -93,9 +114,27 @@ class AutoSaver:
         return new
 
 
+class SettingsPreview:
+    """Show current screen-effect controls immediately, independently of detection."""
+
+    def __init__(self, overlay: Border):
+        self._overlay = overlay
+
+    def update(self, values: dict, active: bool) -> None:
+        if not active:
+            self.close()
+            return
+        defaults = Settings()
+        form = form_values(defaults) | {name: values[name] for name in EFFECT_FIELDS}
+        self._overlay.update(settings_from_form(form, defaults), True)
+
+    def close(self) -> None:
+        self._overlay.close()
+
+
 def run_settings_window(path: Path | None = None) -> int:
     import tkinter as tk
-    from tkinter import ttk
+    from tkinter import colorchooser, ttk
 
     path = path or settings_path()
     base = load_settings(path)
@@ -104,8 +143,12 @@ def run_settings_window(path: Path | None = None) -> int:
     root = tk.Tk()
     root.title("Hands Down settings")
     root.resizable(False, False)
-    frame = ttk.Frame(root, padding=16)
-    frame.grid(sticky="nsew")
+    outer = ttk.Frame(root, padding=16)
+    outer.grid(sticky="nsew")
+    tabs = ttk.Notebook(outer)
+    tabs.grid(row=0, column=0, columnspan=3, sticky="nsew")
+    frame = ttk.Frame(tabs, padding=12)
+    tabs.add(frame, text="Alerts")
 
     chime = tk.BooleanVar(value=values["chime"])
     sound = tk.StringVar(value=values["sound"])
@@ -114,6 +157,9 @@ def run_settings_window(path: Path | None = None) -> int:
     pause_when_locked = tk.BooleanVar(value=values["pause_when_locked"])
     notification = tk.BooleanVar(value=values["notification"])
     screen_border = tk.BooleanVar(value=values["screen_border"])
+    screen = {name: (tk.BooleanVar if name in ("screen_text", "screen_blur", "text_background") else
+                     tk.DoubleVar if name in ("border_width", "blur_level", "text_size", "text_padding_x", "text_padding_y") else tk.StringVar)(value=values[name])
+              for name in SCREEN_FIELDS}
     dwell = tk.DoubleVar(value=values["dwell_s"])
     reminder = tk.StringVar(value=values["reminder"])
     zone = {name: tk.DoubleVar(value=values[name]) for name in ZONE_SLIDERS}
@@ -153,8 +199,49 @@ def run_settings_window(path: Path | None = None) -> int:
     slider("Volume", volume, *LIMITS["volume"], "{:.0f}%")
     hint("63% is as loud as the old Normal")
     add("Notification", ttk.Checkbutton(frame, variable=notification))
-    add("Red border round the screen", ttk.Checkbutton(frame, variable=screen_border))
-    hint("From the alert until the hand moves away. Seen by others if you share your screen")
+    frame = ttk.Frame(tabs, padding=12)
+    tabs.add(frame, text="Screen effects")
+    screen_tab = frame
+    frame = ttk.LabelFrame(screen_tab, text="Border and blur", padding=12)
+    frame.grid(row=0, column=0, sticky="nw", padx=(0, 12))
+    row = 0
+    add("Screen border", ttk.Checkbutton(frame, variable=screen_border))
+
+    def color_control(label: str, name: str) -> None:
+        def choose() -> None:
+            _, chosen = colorchooser.askcolor(color=screen[name].get(), parent=root, title=label)
+            if chosen:
+                screen[name].set(chosen)
+        add(label, ttk.Button(frame, textvariable=screen[name], command=choose))
+
+    color_control("Border color", "border_color")
+    slider("Border thickness", screen["border_width"], *LIMITS["border_width"], "{:.0f}")
+    add("Blur screen", ttk.Checkbutton(frame, variable=screen["screen_blur"]))
+    slider("Blur strength", screen["blur_level"], *LIMITS["blur_level"], "{:.0f}")
+    hint("Blurred snapshot until your hand moves away")
+    if sys.platform == "darwin":
+        hint("Blur needs Screen Recording permission")
+
+    frame = ttk.LabelFrame(screen_tab, text="Reminder text", padding=12)
+    frame.grid(row=0, column=1, sticky="nw")
+    row = 0
+    add("Show text", ttk.Checkbutton(frame, variable=screen["screen_text"]))
+    add("Message", ttk.Entry(frame, textvariable=screen["custom_text"], width=26))
+    slider("Text size", screen["text_size"], *LIMITS["text_size"], "{:.0f}")
+    color_control("Text color", "text_color")
+    add("Location", ttk.Combobox(frame, textvariable=screen["text_position"], state="readonly",
+                                values=list(TEXT_POSITION_CHOICES), width=18))
+    add("Show background", ttk.Checkbutton(frame, variable=screen["text_background"]))
+    color_control("Background color", "text_background_color")
+    slider("Horizontal padding", screen["text_padding_x"], *LIMITS["text_padding_x"], "{:.0f}")
+    slider("Vertical padding", screen["text_padding_y"], *LIMITS["text_padding_y"], "{:.0f}")
+    hint("Padding changes the background size")
+    ttk.Label(screen_tab, text="Live desktop preview while this tab is open. Effects may appear in screen sharing.",
+              foreground="grey").grid(row=1, column=0, columnspan=2, sticky="w", pady=(12, 0))
+
+    frame = ttk.Frame(tabs, padding=12)
+    tabs.add(frame, text="Detection")
+    row = 0
 
     slider("Wait before alerting", dwell, 0.2, 3.0, "{:.1f} s")
     add("Repeat the alert", ttk.Combobox(frame, textvariable=reminder, state="readonly",
@@ -175,6 +262,27 @@ def run_settings_window(path: Path | None = None) -> int:
 
     saver = AutoSaver(path, base, set_startup=startup.set_start_at_login if startup.startup_label() else None)
     pending = [None]
+    preview = SettingsPreview(Border(border_command(), preview=True))
+    preview_pending = [None]
+
+    def update_preview() -> None:
+        preview_pending[0] = None
+        active = tabs.select() == str(screen_tab)
+        root.attributes("-topmost", active)  # keep the controls visible above the preview
+        try:
+            preview.update({"screen_border": screen_border.get(),
+                            **{name: variable.get() for name, variable in screen.items()}}, active)
+        except (tk.TclError, ValueError, KeyError, OSError):
+            preview.close()
+
+    def schedule_preview(*_args) -> None:
+        if preview_pending[0] is not None:
+            root.after_cancel(preview_pending[0])
+        preview_pending[0] = root.after(40, update_preview)
+
+    tabs.bind("<<NotebookTabChanged>>", lambda _event: update_preview())
+    for variable in (screen_border, *screen.values()):
+        variable.trace_add("write", schedule_preview)
 
     def save_now() -> None:
         pending[0] = None
@@ -182,6 +290,7 @@ def run_settings_window(path: Path | None = None) -> int:
             saver.update({
                 "chime": chime.get(), "sound": sound.get(), "volume": volume.get(),
                 "notification": notification.get(), "screen_border": screen_border.get(), "dwell_s": dwell.get(),
+                **{name: variable.get() for name, variable in screen.items()},
                 "reminder": reminder.get(),
                 "release": release.get(), "pause_when_locked": pause_when_locked.get(),
                 **{name: variable.get() for name, variable in zone.items()},
@@ -199,19 +308,25 @@ def run_settings_window(path: Path | None = None) -> int:
         pending[0] = root.after(300, save_now)  # wait until a slider drag settles
 
     for variable in (chime, sound, volume, notification, screen_border, dwell, reminder, release, pause_when_locked,
-                     start, camera, *zone.values()):
+                     start, camera, *zone.values(), *screen.values()):
         variable.trace_add("write", changed)
 
     def close() -> None:
+        if preview_pending[0] is not None:
+            root.after_cancel(preview_pending[0])
+        preview.close()
         if pending[0] is not None:
             root.after_cancel(pending[0])
             save_now()
         root.destroy()
 
-    hint_row = row
-    ttk.Label(frame, text="Changes are saved as you make them", foreground="grey").grid(
+    hint_row = 1
+    ttk.Label(outer, text="Changes are saved as you make them", foreground="grey").grid(
         row=hint_row, column=0, columnspan=2, sticky="w", pady=(12, 0))
-    ttk.Button(frame, text="Close", command=close).grid(row=hint_row, column=2, sticky="e", pady=(12, 0))
+    ttk.Button(outer, text="Close", command=close).grid(row=hint_row, column=2, sticky="e", pady=(12, 0))
     root.protocol("WM_DELETE_WINDOW", close)
-    root.mainloop()
+    try:
+        root.mainloop()
+    finally:
+        preview.close()
     return 0

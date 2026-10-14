@@ -187,3 +187,71 @@ def test_startup_label_names_the_platform():
     assert startup.startup_label("win32") == "Start with Windows"
     assert startup.startup_label("darwin") == "Start at login"
     assert startup.startup_label("linux") is None
+
+
+def test_screen_effect_form_is_saved_and_clamped(tmp_path):
+    base = Settings()
+    values = form_values(base) | {"border_color": "#0088ff", "border_width": 17.6,
+                                 "screen_text": True, "custom_text": "Relax your hands",
+                                 "screen_blur": True, "blur_level": 22.4}
+    saver = AutoSaver(tmp_path / "settings.json", base)
+    result = saver.update(values)
+    assert result.border_color == "#0088ff" and result.border_width == 18
+    assert result.screen_text and result.custom_text == "Relax your hands"
+    assert result.screen_blur and result.blur_level == 22
+    assert load_settings(tmp_path / "settings.json") == result
+
+
+def test_live_preview_changes_immediately_and_closes_when_leaving_tab():
+    from handsdown import settings_window
+    from tests.test_border import make_border
+    from handsdown.border import Border
+    import json
+
+    overlay, processes, _ = make_border()
+    preview = settings_window.SettingsPreview(overlay)
+    values = form_values(Settings(screen_border=True))
+    preview.update(values, active=False)
+    assert not processes
+    preview.update(values, active=True)
+    preview.update(values | {"border_width": 30, "custom_text": "Relax"}, active=True)
+    lines = processes[0].stdin.getvalue().decode().splitlines()
+    assert lines[1] == "show"
+    assert json.loads(lines[-1].removeprefix("configure "))["border_width"] == 30
+    preview.update(values, active=False)
+    assert processes[0].stdin.closed_by_border
+    preview.update(values, active=True)
+    preview.close()
+    assert processes[1].stdin.closed_by_border
+
+
+def test_preview_mode_is_sent_to_overlay_renderer():
+    import json
+    from tests.test_border import FakeProcess
+    from handsdown.border import Border
+    process = FakeProcess()
+    overlay = Border(["border"], popen=lambda *a, **kw: process, preview=True)
+    overlay.update(Settings(screen_text=True), True)
+    config = json.loads(process.stdin.getvalue().decode().splitlines()[0].removeprefix("configure "))
+    assert config["preview"] is True
+
+
+def test_text_style_form_and_preview_forward_all_options(tmp_path):
+    import json
+    from handsdown.settings_window import SettingsPreview
+    from tests.test_border import make_border
+    base = Settings()
+    values = form_values(base) | {"screen_text": True, "border_width": 450, "text_size": 63.6,
+                                 "text_color": "#ff8800", "text_background": False,
+                                 "text_background_color": "#112233", "text_padding_x": 50,
+                                 "text_padding_y": 25, "text_position": "Top left"}
+    result = AutoSaver(tmp_path / "settings.json", base).update(values)
+    assert result.text_size == 64 and result.text_position == "top-left"
+    assert result.text_color == "#ff8800" and not result.text_background
+    assert result.text_padding_x == 50 and result.text_padding_y == 25
+    assert form_values(result)["text_position"] == "Top left"
+    overlay, processes, _ = make_border()
+    SettingsPreview(overlay).update(values, active=True)
+    config = json.loads(processes[0].stdin.getvalue().decode().splitlines()[0].removeprefix("configure "))
+    assert config["text_position"] == "top-left" and config["text_size"] == 64
+    assert config["text_background"] is False and config["border_width"] == 450

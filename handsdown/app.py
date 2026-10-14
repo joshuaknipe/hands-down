@@ -85,7 +85,7 @@ def run_app() -> int:
 
     engine.frame_sink = show
     border = Border(border_command())
-    engine.contact_sink = lambda touching, settings: border.update(settings.screen_border, touching)
+    engine.contact_sink = lambda touching, settings: border.update(settings, touching)
 
     def act(action: str) -> None:
         if action in PAUSES:
@@ -126,5 +126,6 @@ def run_app() -> int:
     engine.stop()
     if engine_thread.is_alive():
         engine_thread.join(timeout=3)  # let it release the camera and log "stop"
+    border.close()
     lock.release()
     return 0

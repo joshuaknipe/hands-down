@@ -5,11 +5,14 @@ unknown keys and wrong types are ignored, and numbers are clamped to sensible li
 """
 
 import json
+import re
 from dataclasses import asdict, dataclass, fields, replace
 from pathlib import Path
 from typing import Callable
 
 SOUNDS = ("chime", "bell", "knock", "rising", "low", "buzz", "beeps", "warble", "honk")
+TEXT_POSITIONS = ("top-left", "top-center", "top-right", "middle-left", "center", "middle-right",
+                  "bottom-left", "bottom-center", "bottom-right")
 LEGACY_VOLUMES = {"quiet": 44, "medium": 55, "normal": 63}  # the old three-step setting, in percent
 
 
@@ -27,7 +30,20 @@ class Settings:
     sound: str = "chime"  # one of SOUNDS
     volume: int = 63  # percent, on a loudness curve (see chime.gain); 63 is the sounds as stored
     notification: bool = False
-    screen_border: bool = False  # a red border round the screen from the alert until the hand moves away
+    screen_border: bool = False  # screen effects last from the alert until the hand moves away
+    border_color: str = "#db2929"
+    border_width: int = 8  # points on macOS, pixels on Windows
+    screen_text: bool = False
+    custom_text: str = "Hands down"
+    text_size: int = 32
+    text_color: str = "#ffffff"
+    text_background: bool = True
+    text_background_color: str = "#151515"
+    text_padding_x: int = 20
+    text_padding_y: int = 16
+    text_position: str = "center"
+    screen_blur: bool = False
+    blur_level: int = 15  # Gaussian blur radius, in screen points/pixels
     start_with_windows: bool = False
     camera_index: int = 0
     pause_when_locked: bool = True  # release the camera while the screen is locked
@@ -44,14 +60,23 @@ LIMITS = {
     "chin_cutout": (0.0, 2.0),
     "camera_index": (0, 9),
     "volume": (20, 100),
+    "border_width": (1, 500),
+    "text_size": (12, 160),
+    "text_padding_x": (0, 300),
+    "text_padding_y": (0, 200),
+    "blur_level": (1, 50),
 }
 
-CHOICES = {"sound": SOUNDS}
+CHOICES = {"sound": SOUNDS, "text_position": TEXT_POSITIONS}
 
 
 def clamp(settings: Settings) -> Settings:
     changes = {name: min(max(getattr(settings, name), low), high) for name, (low, high) in LIMITS.items()}
     defaults = Settings()
+    for name in ("border_color", "text_color", "text_background_color"):
+        color = getattr(settings, name)
+        changes[name] = color.lower() if re.fullmatch(r"#[0-9a-fA-F]{6}", color) else getattr(defaults, name)
+    changes["custom_text"] = settings.custom_text[:500]
     for name, allowed in CHOICES.items():
         if getattr(settings, name) not in allowed:
             changes[name] = getattr(defaults, name)

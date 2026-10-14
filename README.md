@@ -92,8 +92,21 @@ Click the ring for the menu:
 - **Show camera**: a live view with the detection zone drawn on it. Useful while adjusting
   settings. Press **S** or click **Settings** in the view to open settings beside it.
 - **Summary**: today's count, time and a chart by hour, plus the last seven days.
-- **Settings…**: sound and volume, how long before an alert, repeats, the size of the zone,
+- **Settings…**: sound and volume, screen effects, how long before an alert, repeats, the size of the zone,
   pausing while the screen is locked, and starting at sign-in. Changes apply immediately.
+  In **Screen effects**, choose a border color and thickness (up to 500), a custom reminder
+  message, and/or screen blur with adjustable strength. Each effect works independently.
+  Customize the message size and color, choose one of nine screen positions, and set its
+  background color and horizontal/vertical padding. You can also hide the text background.
+  Large borders and text panels are fitted to the display so they stay on screen. While this
+  tab is open, a live desktop preview updates as you adjust the controls; Settings stays
+  above it. Leaving the tab or closing Settings removes the preview. During detection,
+  effects appear after the alert delay and disappear when your hand moves away.
+  Blur displays a blurred snapshot taken when the effect starts, until your hand moves
+  away; it does not continuously update the desktop image. On macOS, blur needs
+  **System Settings → Privacy & Security → Screen Recording** permission for Hands Down
+  (or Python when running from source). If capture is unavailable, an on-screen message
+  explains it and the other effects still work. Screen effects may be visible in screen sharing.
 - **Open log folder**: the raw log (`events.jsonl`).
 - **Quit**.
 
